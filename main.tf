@@ -29,8 +29,8 @@ module "lambda_start_stop_instances" {
   runtime     = "python3.12"
 
   source_type               = "local"
-  source_directory_location = "./lambda"
-  source_file_name          = "ec2_scheduler.py"
+  source_directory_location = "${path.module}/lambda"
+  source_file_name          = null
   sqs_dlq_arn = var.sqs_arn
 } 
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances
