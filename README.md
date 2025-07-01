@@ -1,6 +1,6 @@
 > START INSTRUCTION FOR TECHNATIVE ENGINEERS
 
-# terraform-aws-module-template
+# terraform-aws-module-templates
 
 Template for creating a new TerraForm AWS Module. For TechNative Engineers.
 
@@ -89,4 +89,43 @@ To use this module ...
 ```
 
 <!-- BEGIN_TF_DOCS -->
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | n/a |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_dynamodb_instance_scheduler"></a> [dynamodb\_instance\_scheduler](#module\_dynamodb\_instance\_scheduler) | github.com/wearetechnative/terraform-aws-module-dynamodb.git | n/a |
+| <a name="module_iam_role_lambda_instance_scheduler"></a> [iam\_role\_lambda\_instance\_scheduler](#module\_iam\_role\_lambda\_instance\_scheduler) | github.com/wearetechnative/terraform-aws-iam-role.git | n/a |
+| <a name="module_lambda_start_stop_instances"></a> [lambda\_start\_stop\_instances](#module\_lambda\_start\_stop\_instances) | github.com/wearetechnative/terraform-aws-lambda.git | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_cloudwatch_event_rule.rule](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule) | resource |
+| [aws_cloudwatch_event_target.lambda_trigger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
+| [aws_dynamodb_table_item.period](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item) | resource |
+| [aws_dynamodb_table_item.schedules](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item) | resource |
+| [aws_kms_grant.a](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_grant) | resource |
+| [aws_lambda_permission.allow_eventbridge](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
+| [aws_iam_policy_document.instance_scheduler](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | n/a | `string` | n/a | yes |
+| <a name="input_lambda_role_name"></a> [lambda\_role\_name](#input\_lambda\_role\_name) | n/a | `string` | n/a | yes |
+| <a name="input_periods"></a> [periods](#input\_periods) | n/a | <pre>list(object({<br>    name = string,<br>    days = list(string),<br>    begintime = string,<br>    endtime = string,<br>    timezone = string<br>  }))</pre> | n/a | yes |
+| <a name="input_schedules"></a> [schedules](#input\_schedules) | n/a | <pre>list(object({<br>    name = string,<br>    period = list(string)<br>}))</pre> | n/a | yes |
+| <a name="input_sqs_arn"></a> [sqs\_arn](#input\_sqs\_arn) | n/a | `string` | n/a | yes |
+
+## Outputs
+
+No outputs.
 <!-- END_TF_DOCS -->
