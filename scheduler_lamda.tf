@@ -36,7 +36,7 @@ module "lambda_start_stop_instances" {
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances
 module "iam_role_lambda_instance_scheduler" {
   source    = "github.com/wearetechnative/terraform-aws-iam-role.git"
-  role_name = var.lambda_role_name
+  role_name = "instance-scheduler-${var.lambda_role_name}"
   role_path = "/"
 
   customer_managed_policies = {

@@ -140,20 +140,13 @@ No requirements.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_aws_account_id"></a> [aws\_account\_id](#input\_aws\_account\_id) | ID of the AWS account. | `string` | n/a | yes |
 | <a name="input_bucket_name"></a> [bucket\_name](#input\_bucket\_name) | n/a | `string` | n/a | yes |
 | <a name="input_dynamodb_table_name"></a> [dynamodb\_table\_name](#input\_dynamodb\_table\_name) | n/a | `string` | n/a | yes |
-| <a name="input_git_url"></a> [git\_url](#input\_git\_url) | Git repository ID or URL for tagging and tracking. | `string` | n/a | yes |
-| <a name="input_infra_environment"></a> [infra\_environment](#input\_infra\_environment) | Name of the infrastructure environment. | `string` | n/a | yes |
 | <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | n/a | `string` | n/a | yes |
-| <a name="input_lambda_role_name"></a> [lambda\_role\_name](#input\_lambda\_role\_name) | n/a | `string` | n/a | yes |
-| <a name="input_lambda_scheduler_role_name"></a> [lambda\_scheduler\_role\_name](#input\_lambda\_scheduler\_role\_name) | n/a | `string` | n/a | yes |
+| <a name="input_lambda_role_name"></a> [lambda\_role\_name](#input\_lambda\_role\_name) | name for lambda role which will be created by this module | `string` | n/a | yes |
 | <a name="input_periods"></a> [periods](#input\_periods) | n/a | <pre>list(object({<br/>    name = string,<br/>    days = list(string),<br/>    begintime = string,<br/>    endtime = string,<br/>    timezone = string<br/>  }))</pre> | n/a | yes |
-| <a name="input_project"></a> [project](#input\_project) | Name of the project. | `string` | n/a | yes |
 | <a name="input_schedules"></a> [schedules](#input\_schedules) | n/a | <pre>list(object({<br/>    name = string,<br/>    period = list(string)<br/>}))</pre> | n/a | yes |
 | <a name="input_sqs_arn"></a> [sqs\_arn](#input\_sqs\_arn) | n/a | `string` | n/a | yes |
-| <a name="input_webpage_api_routes"></a> [webpage\_api\_routes](#input\_webpage\_api\_routes) | routes of the Api\_gateway | `list` | n/a | yes |
-| <a name="input_webpage_lambda_role_name"></a> [webpage\_lambda\_role\_name](#input\_webpage\_lambda\_role\_name) | n/a | `string` | n/a | yes |
 
 ## Outputs
 
