@@ -1,0 +1,59 @@
+
+
+module "ec2_lambda" {
+  source = "github.com/wearetechnative/terraform-aws-lambda.git"
+  name              = "webpage_hosting_s3"
+  role_arn          = module.iam_role_webpage_scheduler.role_arn
+  role_arn_provided = true
+  kms_key_arn       = var.kms_key_arn
+
+  handler     = "lambda.handler"
+  memory_size = 512
+  timeout     = 600
+  runtime     = "python3.12"
+
+  source_type               = "local"
+  source_directory_location = "${path.module}/scheduler_lambda"
+  source_file_name          = null
+  sqs_dlq_arn = module.sqs_dlq.sqs_dlq_arn
+}
+
+#creates a iam role for lambda that has access to describe and start/stop ec2 instances
+module "iam_role_webpage_scheduler" {
+  source    = "github.com/wearetechnative/terraform-aws-iam-role.git"
+  role_name = "webpage_scheduler_lambda_role"
+  role_path = "/"
+
+  customer_managed_policies = {
+    "launch_ec2" : jsondecode(data.aws_iam_policy_document.launch_ec2.json)
+  }
+
+  trust_relationship = {
+    "lambda" : { "identifier" : "lambda.amazonaws.com", "identifier_type" : "Service", "enforce_mfa" : false, "enforce_userprincipal" : false, "external_id" : null, "prevent_account_confuseddeputy" : false }
+  }
+}
+
+#IAM policy document that has EC2 accesss
+data "aws_iam_policy_document" "launch_ec2" {
+  statement {
+    sid = "EC2Access"
+    actions = [
+      "ec2:*",
+      "kms:*",
+      "dynamodb:*"
+    ]
+    resources = ["*"]
+  }
+}
+
+module "sqs_dlq" {
+  source = "../01_sqs_dlq"
+}
+
+
+resource "aws_kms_grant" "a" {
+  name              = "my-grant"
+  key_id            = var.kms_key_arn
+  grantee_principal = module.iam_role_webpage_scheduler.role_arn
+  operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
+}

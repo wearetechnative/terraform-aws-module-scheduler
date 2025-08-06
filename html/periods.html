@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>API Gateway Example</title>
+  <style>
+    /* Table styles */
+    table {
+      width: 100%;
+      border-collapse: collapse; /* Makes sure borders between cells are combined */
+    }
+    th, td {
+      border: 1px solid black; /* Adds borders to each cell */
+      padding: 8px;  /* Adds space inside each cell */
+      text-align: left; /* Aligns text to the left */
+    }
+    th {
+      background-color: #f2f2f2; /* Light gray background for header cells */
+    }
+  </style>
+</head>
+
+<body>
+  <h1 style="background-color:yellow;">Instance Scheduler Page</h1>
+  <label for="dynamodb">These are the schedule list:</label>
+  <select id="scheduleDropdown" name="scheduleDropdown" onchange="list_period()"> <option disabled selected value> -- select an option -- </option></select><br>
+  <div id="result"></div><br>
+  <table>
+   <tr>
+      <th>Period Name</th>
+      <th>Days</th>
+      <th>Begin Time</th>
+      <th>End Time</th>
+      <th>Timezone</th>
+      <th>Add/Remove</th>
+    </tr>
+  <tbody id="table-body">
+   </tbody>
+</table><br>
+<button id="button_id"></button>
+<div id="message"></div>
+  
+    <script>
+   function schedule_list() {
+      fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db') 
+        .then(response => response.json())
+        .then(data => {
+          let dropdown = document.getElementById("scheduleDropdown");
+          data.schedules_list.forEach(function(id) {
+            let option = document.createElement("option");
+            option.value = id;
+            option.text = id;
+            dropdown.add(option);
+          });
+        })
+        .catch(error => console.error('Error loading instances:', error));
+    }
+    function list_period(){
+       const schedule = document.getElementById("scheduleDropdown").value;
+        cleartable()
+       fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db/list_periods', {
+        method: "POST", // Or GET with query params
+        body: schedule,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.json())
+      .then(data => createTableRows(data))  
+      .catch(error => console.error('Error checking schedule:', error));
+    
+     
+    }
+    
+ function deleteRow(button) {
+     const tr = button.parentNode.parentNode;
+     const periodName = tr.cells[0].textContent.trim();
+     const schedule = document.getElementById("scheduleDropdown").value;
+     if (!confirm(`Do you really want to delete period "${periodName}"?`))   {
+        return;    
+  }
+    const table = document.getElementById("table-body");
+	const numRows = table.rows.length;
+    if(numRows > 1){
+    var delete_item = {
+       period_name : periodName,
+       selected_schedule: schedule
+       }
+    console.log('"${periodName}" is getting deleted...');
+    fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db/delete_period', {
+          method: "POST", // Or GET with query params
+          body: JSON.stringify(delete_item),
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+     list_period()     
+     }
+    else{
+     // document.getElementById("message").innerText = "Period List can't be empty"
+     {alert("Period List can't be empty")}
+    } 
+  }
+   
+   function createTableRows(data) {
+   const tableBody = document.getElementById('table-body');
+  
+  // Check if data exists
+  if (!data || !data.period_list) {
+    console.error("Invalid data format.");
+    return;
+  }
+  
+  data.period_list.forEach(period => {
+    const row = document.createElement('tr');
+    
+    // Extract values from the Lambda response
+    const nameCell = document.createElement('td');
+    nameCell.textContent = period.name.S;
+    const daysCell = document.createElement('td');
+    daysCell.textContent = period.days.SS.join(', ');
+    
+    const begintimeCell = document.createElement('td');
+    begintimeCell.textContent = period.begintime.S;
+    
+    const endtimeCell = document.createElement('td');
+    endtimeCell.textContent = period.endtime.S;
+    const timezoneCell = document.createElement('td');
+    timezoneCell.textContent = period.timezone.S;
+    const removecell = document.createElement('td');
+    removecell.innerHTML='<input type="button" value="Delete" onclick="deleteRow(this)"/>';
+    
+    // Append cells to the row
+    row.appendChild(nameCell);
+    row.appendChild(daysCell);
+    row.appendChild(begintimeCell);
+    row.appendChild(endtimeCell);
+    row.appendChild(timezoneCell);
+    row.appendChild(removecell);
+    
+    // Append the row to the table body
+    tableBody.appendChild(row);
+  });
+  create_button("add")
+  
+}
+
+function create_button(cont){
+        if (cont.includes("add")){
+        document.getElementById("button_id").innerText ="Click to add a period to the schedule"
+        document.getElementById("button_id").onclick = add
+        }
+        
+  }
+      
+
+function cleartable() {
+    
+      document.getElementById("table-body").innerText = '';
+    }
+
+    
+function add(){
+    var table = document.getElementById('table-body');
+    var row = table.insertRow();
+    var namecell = row.insertCell(0);
+    var dayscell = row.insertCell(1);
+    var begintimecell = row.insertCell(2);
+    var endtimecell = row.insertCell(3);
+    var timezonecell = row.insertCell(4);
+    var removecell = row.insertCell(5);
+    namecell.innerHTML = `<input type="text" placeholder="Enter period name" id="period_name"/>`;
+    removecell.innerHTML = `<input type="button" value="Add" onclick="add_dynamodb()"/>`;
+    dayscell.innerHTML = `<select multiple id="days">
+    <option value="mon">Mon</option>
+    <option value="tue">Tue</option>
+    <option value="wed">Wed</option>
+    <option value="thu">Thu</option>
+    <option value="fri">Fri</option>
+    <option value="sat">Sat</option>
+    <option value="sun">Sun</option>
+  </select>`;
+    begintimecell.innerHTML = `<input type="text" placeholder="Enter Begin Time" id="begin_time"/>`
+    endtimecell.innerHTML = `<input type="text" placeholder="Enter End Time" id="end_time" />`
+    timezonecell.innerHTML = `<select id="timezone">
+    <option value="Europe/Amsterdam">Europe/Amsterdam</option>
+    <option value="Europe/London">Europe/London</option>
+    <option value="America/New_York">America/New_York</option>
+    <option value="Asia/Kolkata">Asia/Kolkata</option>
+    <option value="Australia/Sydney">Australia/Sydney</option>
+  </select>`;
+   
+    
+}
+
+function add_dynamodb(){
+var period = document.getElementById("period_name").value;
+var days = document.querySelector('#days');
+var selectedDays = Array.from(days.options) // Convert options to an array
+    .filter(option => option.selected)      // Filter selected options
+    .map(option => option.value);  
+
+var begintime = document.getElementById("begin_time").value;
+var endtime = document.getElementById("end_time").value;
+var timezone = document.getElementById("timezone").value;
+var schedule = document.getElementById("scheduleDropdown").value;
+var add_item = {
+     period_name : period,
+     selected_days: selectedDays,
+     begin_time: begintime,
+     end_time: endtime,
+     timezone: timezone,
+     schedule_name: schedule
+  };
+//var test = JSON.stringify(json)  
+
+//console.log(json);
+fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db/add_period', {
+        method: "POST", // Or GET with query params
+        body: JSON.stringify(add_item),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+{alert("The period is added to the schedule")}     
+ list_period()
+         
+}
+
+
+
+schedule_list(); 
+   
+    </script>
+
+
+
+
+
