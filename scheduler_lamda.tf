@@ -9,12 +9,12 @@
 
 
 
-resource "aws_kms_grant" "a" {
-  name              = "my-grant"
-  key_id            = "arn:aws:kms:eu-central-1:158565517012:key/74d438bd-bc80-4598-8df7-08f6d4fa6803"
-  grantee_principal = module.iam_role_lambda_instance_scheduler.role_arn
-  operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
-}
+# resource "aws_kms_grant" "a" {
+#   name              = "my-grant"
+#   key_id            = "arn:aws:kms:eu-central-1:158565517012:key/74d438bd-bc80-4598-8df7-08f6d4fa6803"
+#   grantee_principal = module.iam_role_lambda_instance_scheduler.role_arn
+#   operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
+# }
 
 
 module "lambda_start_stop_instances" {
@@ -36,7 +36,7 @@ module "lambda_start_stop_instances" {
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances
 module "iam_role_lambda_instance_scheduler" {
   source    = "github.com/wearetechnative/terraform-aws-iam-role.git"
-  role_name = var.lambda_role_name
+  role_name = "instance-scheduler-${var.lambda_role_name}"
   role_path = "/"
 
   customer_managed_policies = {
