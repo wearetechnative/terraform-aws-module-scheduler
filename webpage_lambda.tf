@@ -1,6 +1,6 @@
 
 
-module "ec2_lambda" {
+module "webpage_lambda" {
   source = "github.com/wearetechnative/terraform-aws-lambda.git"
   name              = "webpage_hosting_s3"
   role_arn          = module.iam_role_webpage_scheduler.role_arn
@@ -13,7 +13,7 @@ module "ec2_lambda" {
   runtime     = "python3.12"
 
   source_type               = "local"
-  source_directory_location = "${path.module}/scheduler_lambda"
+  source_directory_location = "${path.module}/webpage_lambda"
   source_file_name          = null
   sqs_dlq_arn = var.sqs_arn
 }
