@@ -1,6 +1,6 @@
 module "dynamodb_instance_scheduler" {
   source = "github.com/wearetechnative/terraform-aws-module-dynamodb.git"
-  name = "My_Instance_Scheduler_configuration_table"
+  name = var.dynamodb_table_name
   partition_key = "type"
   partition_key_type = "S"
   range_key = "name"
