@@ -14,7 +14,7 @@ resource "aws_apigatewayv2_api" "my_api" {
 resource "aws_apigatewayv2_integration" "int" {
     api_id             = aws_apigatewayv2_api.my_api.id
     integration_type   = "AWS_PROXY"
-    integration_uri    = module.ec2_lambda.lambda_function_arn
+    integration_uri    = module.webpage_lambda.lambda_function_arn
     integration_method = "POST"
     payload_format_version = "2.0"
 
@@ -38,7 +38,7 @@ resource "aws_apigatewayv2_stage" "my_api_stg" {
 resource "aws_lambda_permission" "allow_API" {
   statement_id  = "AllowExecutionFromApigateway"
   action        = "lambda:InvokeFunction"
-  function_name = module.ec2_lambda.lambda_function_name
+  function_name = module.webpage_lambda.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db"
 }
@@ -46,7 +46,7 @@ resource "aws_lambda_permission" "allow_API" {
 resource "aws_lambda_permission" "allow_API_1" {
   statement_id  = "AllowExecutionFromApigateway_1"
   action        = "lambda:InvokeFunction"
-  function_name = module.ec2_lambda.lambda_function_name
+  function_name = module.webpage_lambda.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/list_periods"
 }
@@ -54,7 +54,7 @@ resource "aws_lambda_permission" "allow_API_1" {
 resource "aws_lambda_permission" "allow_API_2" {
   statement_id  = "AllowExecutionFromApigateway_2"
   action        = "lambda:InvokeFunction"
-  function_name = module.ec2_lambda.lambda_function_name
+  function_name = module.webpage_lambda.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/add_period"
 }
@@ -62,7 +62,7 @@ resource "aws_lambda_permission" "allow_API_2" {
 resource "aws_lambda_permission" "allow_API_3" {
   statement_id  = "AllowExecutionFromApigateway_3"
   action        = "lambda:InvokeFunction"
-  function_name = module.ec2_lambda.lambda_function_name
+  function_name = module.webpage_lambda.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/delete_period"
 }
