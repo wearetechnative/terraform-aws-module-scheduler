@@ -41,7 +41,7 @@
   
     <script>
    function schedule_list() {
-      fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db') 
+      fetch('${api_url}/db') 
         .then(response => response.json())
         .then(data => {
           let dropdown = document.getElementById("scheduleDropdown");
@@ -57,7 +57,7 @@
     function list_period(){
        const schedule = document.getElementById("scheduleDropdown").value;
         cleartable()
-       fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db/list_periods', {
+       fetch('${api_url}/db/list_periods', {
         method: "POST", // Or GET with query params
         body: schedule,
         headers: {
@@ -86,7 +86,7 @@
        selected_schedule: schedule
        }
     console.log('"${periodName}" is getting deleted...');
-    fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db/delete_period', {
+    fetch('${api_url}/db/delete_period', {
           method: "POST", // Or GET with query params
           body: JSON.stringify(delete_item),
           headers: {
@@ -214,7 +214,7 @@ var add_item = {
 //var test = JSON.stringify(json)  
 
 //console.log(json);
-fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db/add_period', {
+fetch('${api_url}/db/add_period', {
         method: "POST", // Or GET with query params
         body: JSON.stringify(add_item),
         headers: {

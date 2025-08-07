@@ -57,7 +57,7 @@
 </table><br>
 <script>
  function list_schedule(){
-     fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db')
+     fetch('${api_url}/db')
      .then(response => response.json())
      .then(data => {
               data.schedules_list.forEach(function(id) {
@@ -82,7 +82,7 @@
  function list_period(data){
        schedule = data
        
-       fetch('https://4lp5tvm67d.execute-api.eu-central-1.amazonaws.com/db/list_periods', {
+       fetch('${api_url}/db/list_periods', {
         method: "POST", // Or GET with query params
         body: schedule,
         headers: {
