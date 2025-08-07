@@ -15,7 +15,7 @@ module "ec2_lambda" {
   source_type               = "local"
   source_directory_location = "${path.module}/scheduler_lambda"
   source_file_name          = null
-  sqs_dlq_arn = module.sqs_dlq.sqs_dlq_arn
+  sqs_dlq_arn = var.sqs_arn
 }
 
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances

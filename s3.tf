@@ -6,26 +6,26 @@ resource "aws_s3_bucket" "webpage_bucket" {
 resource "aws_s3_bucket_object" "object" {
   bucket = aws_s3_bucket.webpage_bucket.id
   key    = "index.html"
-  source = "./index.html"
+  source = "${path.module}/html/index.html"
   content_type = "text/html"
-  etag = filemd5("./index.html")
+  etag = filemd5("${path.module}/html/index.html")
 
 }
 
 resource "aws_s3_bucket_object" "object2" {
   bucket = aws_s3_bucket.webpage_bucket.id
   key    = "periods"
-  source = "./periods.html"
+  source = "${path.module}/html/periods.html"
   content_type = "text/html"
-  etag = filemd5("./periods.html")
+  etag = filemd5("${path.module}/html/periods.html")
 
 }
 resource "aws_s3_bucket_object" "object3" {
   bucket = aws_s3_bucket.webpage_bucket.id
   key    = "schedules"
-  source = "./schedules.html"
+  source = "${path.module}/html/schedules.html"
   content_type = "text/html"
-  etag = filemd5("./schedules.html")
+  etag = filemd5("${path.module}/html/schedules.html")
 
 }
 

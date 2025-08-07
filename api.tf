@@ -23,7 +23,7 @@ resource "aws_apigatewayv2_integration" "int" {
 resource "aws_apigatewayv2_route" "my_route" {
     count = length(local.webpage_api_routes)
     api_id    = aws_apigatewayv2_api.my_api.id
-    route_key = var.webpage_api_routes[count.index]
+    route_key = local.webpage_api_routes[count.index]
     target    = "integrations/${aws_apigatewayv2_integration.int.id}"
 }
 
