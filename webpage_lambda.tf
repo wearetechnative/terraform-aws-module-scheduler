@@ -16,6 +16,9 @@ module "webpage_lambda" {
   source_directory_location = "${path.module}/webpage_lambda"
   source_file_name          = null
   sqs_dlq_arn = var.sqs_arn
+  environment_variables = {
+    TABLENAME = var.dynamodb_table_name  
+}
 }
 
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances

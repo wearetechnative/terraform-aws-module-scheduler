@@ -1,13 +1,15 @@
 def handler(event, context):    
     import boto3
+    import os
     import json
+    table_name=os.environ["TABLENAME"]
     path = event.get('rawPath')
     db = boto3.resource('dynamodb')
     dynamodb = boto3.client('dynamodb')
-    table = db.Table(var.dynamodb_table_name)
+    table = db.Table(table_name)
     def add_period_to_schedule(p, s):
         response = dynamodb.get_item(
-        TableName = var.dynamodb_table_name,
+        TableName = table_name,
         Key={
             'type': {
                 'S': 'schedule',
@@ -25,7 +27,7 @@ def handler(event, context):
         period_list.append(p)
         print(f'period_list is {period_list}')
         response = dynamodb.update_item(
-            TableName = var.dynamodb_table_name,
+            TableName = table_name,
             Key={
                 'type': {
                     'S': 'schedule',
@@ -68,7 +70,7 @@ def handler(event, context):
         print(schedule)
         if schedule != None:
             response = dynamodb.get_item(
-            TableName = var.dynamodb_table_name,
+            TableName = table_name,
             Key={
                 'type': {
                     'S': 'schedule',
@@ -90,7 +92,7 @@ def handler(event, context):
             for p in period:
                 print(f'period is {p}')
                 response_period = dynamodb.get_item(
-                TableName = var.dynamodb_table_name,
+                TableName = table_name,
                 Key={
                     'type': {
                         'S': 'period',
@@ -115,7 +117,7 @@ def handler(event, context):
         if period != None:
             period = json.loads(period)
             response = dynamodb.update_item(
-                TableName = var.dynamodb_table_name,
+                TableName = table_name,
                 Key={
                     'type': {
                         'S': 'period',
@@ -160,7 +162,7 @@ def handler(event, context):
         if delete_item != None:
             delete_item = json.loads(delete_item)
             response = dynamodb.get_item(
-                TableName = var.dynamodb_table_name,
+                TableName = table_name,
                 Key={
                     'type': {
                         'S': "schedule"
@@ -179,7 +181,7 @@ def handler(event, context):
             period_list.remove(delete_item["period_name"])
             print(f'period_list is {period_list}')
             response = dynamodb.update_item(
-                TableName = var.dynamodb_table_name,
+                TableName = table_name,
                 Key={
                     'type': {
                         'S': "schedule"
