@@ -75,7 +75,7 @@
      const tr = button.parentNode.parentNode;
      const periodName = tr.cells[0].textContent.trim();
      const schedule = document.getElementById("scheduleDropdown").value;
-     if (!confirm(`Do you really want to delete period "${periodName}"?`))   {
+     if (!confirm(`Do you really want to delete period "$${periodName}"?`))   {
         return;    
   }
     const table = document.getElementById("table-body");
@@ -85,7 +85,7 @@
        period_name : periodName,
        selected_schedule: schedule
        }
-    console.log('"${periodName}" is getting deleted...');
+    console.log('"$${periodName}" is getting deleted...');
     fetch('${api_url}/db/delete_period', {
           method: "POST", // Or GET with query params
           body: JSON.stringify(delete_item),
