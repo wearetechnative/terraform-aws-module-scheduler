@@ -18,7 +18,7 @@ module "webpage_lambda" {
   sqs_dlq_arn = var.sqs_arn
   environment_variables = {
     TABLENAME = var.dynamodb_table_name  
-}
+  }
 }
 
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances
@@ -47,5 +47,12 @@ data "aws_iam_policy_document" "launch_ec2" {
     ]
     resources = ["*"]
   }
+}
+
+resource "aws_kms_grant" "webpage_scheduler_role" {
+  name              = "grant-webpage_scheduler_role"
+  key_id            = var.kms_key_arn
+  grantee_principal = module.iam_role_webpage_scheduler.role_arn
+  operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
 }
 
