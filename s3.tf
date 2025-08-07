@@ -6,7 +6,7 @@ resource "aws_s3_bucket" "webpage_bucket" {
 resource "aws_s3_bucket_object" "object" {
   bucket = aws_s3_bucket.webpage_bucket.id
   key    = "index.html"
-  source = "${path.module}/html/index.html"
+  source = templatefile("${path.module}/html/index.html.tftpl")
   content_type = "text/html"
   etag = filemd5("${path.module}/html/index.html")
 
