@@ -46,14 +46,3 @@ data "aws_iam_policy_document" "launch_ec2" {
   }
 }
 
-module "sqs_dlq" {
-  source = "../01_sqs_dlq"
-}
-
-
-resource "aws_kms_grant" "a" {
-  name              = "my-grant"
-  key_id            = var.kms_key_arn
-  grantee_principal = module.iam_role_webpage_scheduler.role_arn
-  operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
-}
