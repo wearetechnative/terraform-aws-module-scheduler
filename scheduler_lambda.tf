@@ -32,6 +32,9 @@ module "lambda_start_stop_instances" {
   source_directory_location = "${path.module}/scheduler_lambda"
   source_file_name          = null
   sqs_dlq_arn = var.sqs_arn
+  environment_variables = {
+    TABLE_NAME = var.dynamodb_table_name
+  }
 } 
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances
 module "iam_role_lambda_instance_scheduler" {
