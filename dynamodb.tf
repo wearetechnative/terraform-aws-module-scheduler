@@ -6,6 +6,9 @@ module "dynamodb_instance_scheduler" {
   range_key = "name"
   range_key_type = "S"
   kms_key_arn = var.kms_key_arn
+  environment_variables = {
+    TABLE_NAME = var.dynamodb_table_name
+  }
   
 }
 resource "aws_dynamodb_table_item" "schedules" {

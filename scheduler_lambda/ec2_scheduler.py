@@ -1,9 +1,11 @@
 def handler(event, context):
     import boto3
+    import os
     from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
     from dateutil import tz        
     ec2 = boto3.resource('ec2')
+    table_name = os.environ["TABLE_NAME"]
 
 
     def fetch_item(f, item):
@@ -17,7 +19,7 @@ def handler(event, context):
     def dynamo_db(type, name):
         db = boto3.client('dynamodb')
         response = db.get_item(
-        TableName = 'My_Instance_Scheduler_configuration_table',
+        TableName = table_name,
         Key={
             'type': {
                 'S': type,
