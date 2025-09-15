@@ -11,7 +11,7 @@
 
 resource "aws_kms_grant" "a" {
   name              = "my-grant"
-  key_id            = "arn:aws:kms:eu-central-1:158565517012:key/74d438bd-bc80-4598-8df7-08f6d4fa6803"
+  key_id            = var.kms_key_arn
   grantee_principal = module.iam_role_lambda_instance_scheduler.role_arn
   operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
 }
