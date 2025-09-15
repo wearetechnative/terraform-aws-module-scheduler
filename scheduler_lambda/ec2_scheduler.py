@@ -62,23 +62,26 @@ def handler(event, context):
        
             if day in days: 
                 currenttime = datetime.now(ZoneInfo(timezone)).time()
-               
-                begintime = datetime.strptime(begintime, "%H:%M").time()
                 endtime = datetime.strptime(endtime, "%H:%M").time()
-                
-                begintime = begintime.hour * 3600 + begintime.minute * 60 + begintime.second
                 currenttime = currenttime.hour * 3600 +currenttime.minute * 60 + currenttime.second
                 endtime = endtime.hour * 3600 + endtime.minute * 60 +  endtime.second
-                time_diff = (currenttime - begintime)
-                
-                if currenttime >= begintime and endtime>=currenttime:
-                            
-                    print("Instance should be started")
-                    return 'start'
+                if begintime == "":
+                    if currenttime >= endtime:
+                        print("No begin time")
+                        return('stop')
+                else:   
+                    begintime = datetime.strptime(begintime, "%H:%M").time()
+                    begintime = begintime.hour * 3600 + begintime.minute * 60 + begintime.second
+                    time_diff = (currenttime - begintime)
                     
-                else:
-                    return('stop')
-                    print('not starting')
+                    if currenttime >= begintime and endtime>=currenttime:
+                                
+                        print("Instance should be started")
+                        return 'start'
+                        
+                    else:
+                        return('stop')
+                        print('not starting')
             else:
                     return('stop')
               
@@ -90,27 +93,29 @@ def handler(event, context):
         tags = instance.tags
         for tag in tags:
             if tag.get('Key') == 'InstanceScheduler':
-                name_of_schedule = tag.get('Value')
-                print(name_of_schedule)
-                periods_in_schedule = dynamo_db('schedule', name_of_schedule)
-                print(periods_in_schedule)
-                if periods_in_schedule != "item_not_found":
-                    for period_p in periods_in_schedule:
-                        state = dynamo_db('period', period_p)
-                        print(f'the state is {state}')
-                        instance_started_by_period = False
-                        if state == 'start':
-                            instance.start()
-                            instance_started_by_period = True
-                            print("instance started")
-                        else:
-                            if instance_started_by_period == False and state == 'stop':
-                                instance.stop() 
+                val = tag.get('Value')
+                if val: 
+                    name_of_schedule = tag.get('Value')
+                    print(name_of_schedule)
+                    periods_in_schedule = dynamo_db('schedule', name_of_schedule)
+                    print(periods_in_schedule)
+                    if periods_in_schedule != "item_not_found":
+                        for period_p in periods_in_schedule:
+                            state = dynamo_db('period', period_p)
+                            print(f'the state is {state}')
+                            instance_started_by_period = False
+                            if state == 'start':
+                                instance.start()
+                                instance_started_by_period = True
+                                print("instance started")
+                            else:
+                                if instance_started_by_period == False and state == 'stop':
+                                    instance.stop() 
     return {
-            "statusCode" :200,
-            "body": "Success!"
-        }
-    
+                "statusCode" :200,
+                "body": "Success!"
+            }
+        
 
 
 
