@@ -36,6 +36,8 @@ def handler(event, context):
                 periods = item.get('periods')
                 print(periods)
                 results = []
+                if periods == None:
+                    return('item_not_found')
                 for key, value in periods.items():
                     period = value
                 
@@ -69,6 +71,7 @@ def handler(event, context):
                     if currenttime >= endtime:
                         print("No begin time")
                         return('stop')
+                      
                 else:   
                     begintime = datetime.strptime(begintime, "%H:%M").time()
                     begintime = begintime.hour * 3600 + begintime.minute * 60 + begintime.second
@@ -82,12 +85,7 @@ def handler(event, context):
                     else:
                         return('stop')
                         print('not starting')
-            else:
-                    return('stop')
-              
-
-    
-    
+           
         
     for instance in ec2.instances.all():
         tags = instance.tags
@@ -100,22 +98,27 @@ def handler(event, context):
                     periods_in_schedule = dynamo_db('schedule', name_of_schedule)
                     print(periods_in_schedule)
                     if periods_in_schedule != "item_not_found":
+                        instance_started_by_period = None
+                        state_list = []
                         for period_p in periods_in_schedule:
                             state = dynamo_db('period', period_p)
-                            print(f'the state is {state}')
-                            instance_started_by_period = False
-                            if state == 'start':
-                                instance.start()
-                                instance_started_by_period = True
-                                print("instance started")
-                            else:
-                                if instance_started_by_period == False and state == 'stop':
-                                    instance.stop() 
+                            state_list.append(state)
+                            
+                        if 'start' in state_list:
+                            instance.start()
+                            instance_started_by_period = True
+                            print(f'Starting the Instance {instance.id}')
+
+                        elif instance_started_by_period != True and 'stop' in state_list:
+                            instance.stop()
+                            print(f'Stopping the Instance {instance.id}')
+                    else:
+                        print("exiting because no periods found")
+                        exit(1)
     return {
                 "statusCode" :200,
                 "body": "Success!"
             }
         
-
 
 
