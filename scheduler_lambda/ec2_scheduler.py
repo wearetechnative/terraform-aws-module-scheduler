@@ -110,8 +110,12 @@ def handler(event, context):
                             print(f'Starting the Instance {instance.id}')
 
                         elif instance_started_by_period != True and 'stop' in state_list:
-                            instance.stop()
-                            print(f'Stopping the Instance {instance.id}')
+                            if instance.hibernation_options == {'Configured': True}:
+                                instance.stop(Hibernate=True)
+                                print(f'Stopping the Instance {instance.id} with Hibernate')
+                            else:
+                                instance.stop()    
+                                print(f'Stopping the Instance {instance.id}')
                     else:
                         print("exiting because no periods found")
                         exit(1)
