@@ -60,11 +60,40 @@ publication, you can publish a first version.
 > END INSTRUCTION FOR TECHNATIVE ENGINEERS
 
 
-# Terraform AWS [Module Name] ![](https://img.shields.io/github/workflow/status/TechNative-B-V/terraform-aws-module-name/tflint.yaml?style=plastic)
+# Terraform AWS [Scheduler] ![](https://img.shields.io/github/workflow/status/TechNative-B-V/terraform-aws-module-name/tflint.yaml?style=plastic)
 
 <!-- SHIELDS -->
 
-This module implements ...
+This module allows you to start and stop instances on a defined schedule. The schedules are stored in a DynamoDB table along with their time periods.
+
+# Key Concepts
+
+### Schedule
+A named schedule that defines when instances tagged with that schedule should run. The schedule name is used as the value for the InstanceScheduler tag on any instance you want to manage via this module.
+
+### Period
+Each schedule has one or more periods. A period defines a set of rules about which days, what timezone, what start time, and what end time the schedule applies.
+
+## Period Attributes
+
+Each period includes the following:
+
+##  Attribute Description
+    weekdays -  One or more days of the week when the period is active.You can use multiple days.(e.g. mon, tue, fri)
+                Valid abbreviations: mon, tue,  wed, thu, fri, sat, sun.
+    timezone -  The timezone for interpreting begintime and endtime.UTC is the default timezone.                       
+    begintime-  The time of day when instances should start (in 24-hour format, e.g. 09:00).
+    endtime  -  The time of day when instances should stop (in 24-hour format, e.g. 17:00).
+
+### Rules & Examples
+
+Each schedule must have at least one period.
+
+You can have multiple periods within a schedule (for instance, one for weekdays 9-17, another for weekends).
+
+Times are in 24-hour format.
+
+Days must use consistent abbreviations (e.g. mon, tue, etc.).
 
 [![](we-are-technative.png)](https://www.technative.nl)
 
@@ -83,8 +112,39 @@ See [pre-commit installation](https://pre-commit.com/#install) on how to install
 To use this module ...
 
 ```hcl
-{
-  some_conf = "might need explanation"
+module "scheduler"{
+    source = "git@github.com:wearetechnative/terraform-aws-lambda.git"
+    bucket_name = "instancescheduler-bucket-example"
+    dynamodb_table_name = "instance_scheduler"
+    kms_key_arn = *******
+    lambda_role_name = "scheduler_role"
+    periods = [
+      {
+         "name": "7am-to-8pm",
+         "days": ["mon", "tue", "wed", "thu", "fri"],
+         "begintime": "7:00",
+         "endtime": "20:00",
+         "timezone": "Europe/Amsterdam"
+      },
+      {
+         "name": "8am-to-7pm",
+         "days": ["mon", "tue", "wed", "thu", "fri"],
+         "begintime": "8:00",
+         "endtime": "19:00",
+         "timezone": "Europe/Amsterdam"
+      }
+    ]
+    schedules = [
+      {
+         "name": "mon-fri-7am-to-8pm",
+         "period": ["7am-to-8pm"]
+      },
+      {
+         "name": "mon-fri-8am-to-7pm",
+         "period": ["8am-to-7pm"]
+      }
+    ]
+    sqs_arn = ********
 }
 ```
 
