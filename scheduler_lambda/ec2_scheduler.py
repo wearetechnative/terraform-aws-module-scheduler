@@ -117,8 +117,8 @@ def handler(event, context):
                                 instance.stop()    
                                 print(f'Stopping the Instance {instance.id}')
                     else:
-                        print("exiting because no periods found")
-                        exit(1)
+                        print("No periods found")
+                        
     return {
                 "statusCode" :200,
                 "body": "Success!"
