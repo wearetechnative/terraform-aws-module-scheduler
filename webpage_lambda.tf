@@ -1,7 +1,7 @@
 
 
 module "webpage_lambda" {
-  source = "github.com/wearetechnative/terraform-aws-lambda.git"
+  source = "github.com/wearetechnative/terraform-aws-lambda.git?ref=fe102f9e43209b47bf919be75066df102458d8d9"
   name              = "webpage_hosting_s3"
   role_arn          = module.iam_role_webpage_scheduler.role_arn
   role_arn_provided = true
@@ -23,7 +23,7 @@ module "webpage_lambda" {
 
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances
 module "iam_role_webpage_scheduler" {
-  source    = "github.com/wearetechnative/terraform-aws-iam-role.git"
+  source    = "github.com/wearetechnative/terraform-aws-iam-role.git?ref=9229bbd0280807cbc49f194ff6d2741265dc108a"
   role_name = "webpage-${var.lambda_role_name}"
   role_path = "/"
 

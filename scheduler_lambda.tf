@@ -18,7 +18,7 @@ resource "aws_kms_grant" "a" {
 
 
 module "lambda_start_stop_instances" {
-  source = "github.com/wearetechnative/terraform-aws-lambda.git"
+  source = "github.com/wearetechnative/terraform-aws-lambda.git?ref=fe102f9e43209b47bf919be75066df102458d8d9"
   name              = "TechNative_Instance_Scheduler"
   role_arn          = module.iam_role_lambda_instance_scheduler.role_arn
   role_arn_provided = true
@@ -38,7 +38,7 @@ module "lambda_start_stop_instances" {
 } 
 #creates a iam role for lambda that has access to describe and start/stop ec2 instances
 module "iam_role_lambda_instance_scheduler" {
-  source    = "github.com/wearetechnative/terraform-aws-iam-role.git"
+  source    = "github.com/wearetechnative/terraform-aws-iam-role.git?ref=9229bbd0280807cbc49f194ff6d2741265dc108a"
   role_name = "instance-scheduler-${var.lambda_role_name}"
   role_path = "/"
 

@@ -1,5 +1,5 @@
 module "dynamodb_instance_scheduler" {
-  source = "github.com/wearetechnative/terraform-aws-module-dynamodb.git"
+  source = "github.com/wearetechnative/terraform-aws-module-dynamodb.git?ref=dc1d5ba4623bda928ec59d586b36a1af7e601f70"
   name = var.dynamodb_table_name
   partition_key = "type"
   partition_key_type = "S"
