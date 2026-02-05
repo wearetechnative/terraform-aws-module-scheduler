@@ -89,7 +89,7 @@ module "scheduler"{
 <!-- BEGIN_TF_DOCS -->
 ## Ignore Scheduler functionality
 
-You can use this feature to keep an instance running beyond its scheduled stop time. To enable it, simply add a tag to the instance called Ignore_scheduler with a value that indicates the time until which the instance should remain running, including the timezone (for example: 22:00 Europe/Amsterdam). After that time, the tag will be automatically removed and the instance will resume its normal schedule.
+You can use this feature to keep an instance running beyond its scheduled stop time. To enable it, simply add a tag to the instance called `Ignore_scheduler` with a value that indicates the time until which the instance should remain running, including the timezone `(for example: 22:00 Europe/Amsterdam)`. After that time, the tag will be automatically removed and the instance will resume its normal schedule.
 
 ## Requirements
 
