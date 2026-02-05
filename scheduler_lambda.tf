@@ -59,7 +59,7 @@ data "aws_iam_policy_document" "instance_scheduler" {
       "ec2:StartInstances",
       "ec2:StopInstances",
       "ec2:DescribeInstances",
-      "ec2:TerminateInstances",
+      "ec2:DeleteTags",
       "ec2:DescribeTags",
       "ec2:DescribeInstanceStatus",
       "dynamodb:*",
