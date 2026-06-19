@@ -11,7 +11,10 @@ def handler(event, context):
     def json_response(status_code, body):
         return {
             "statusCode": status_code,
-            "headers": {"content-type": "application/json"},
+            "headers": {
+                "content-type": "application/json",
+                "access-control-allow-origin": "*"
+            },
             "body": json.dumps(body)
         }
 

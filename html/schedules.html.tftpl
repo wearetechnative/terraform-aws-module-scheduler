@@ -107,7 +107,7 @@
     function getPeriods(name) {
       return fetch(apiUrl + '/db/list_periods', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'text/plain;charset=UTF-8'},
         body: name
       }).then(function (response) {
         if (!response.ok) throw new Error('Could not load periods');

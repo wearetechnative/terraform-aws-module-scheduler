@@ -218,7 +218,7 @@
       rows.innerHTML = '<tr><td colspan="6"><div class="state">Loading periods…</div></td></tr>';
       request('/db/list_periods', {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
         body:JSON.stringify({schedule_name:schedule})
       })
         .then(function (data) { periods = data.period_list || []; render(); })
@@ -244,7 +244,7 @@
       if (periods.some(function (item) { return attributeValue(item.name, '') === name; })) { toast('This schedule already contains that period.', true); return; }
       const payload = {period_name:name, selected_days:selectedDays, begin_time:begin, end_time:end, timezone:document.getElementById('timezone').value, schedule_name:dropdown.value};
       document.getElementById('savePeriod').disabled = true;
-      request('/db/add_period', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+      request('/db/add_period', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
         .then(function () { adding = false; toast('Period added to ' + dropdown.value); loadPeriods(); })
         .catch(function () { toast('Could not add the period', true); document.getElementById('savePeriod').disabled = false; });
     }
@@ -253,7 +253,7 @@
       if (periods.length <= 1) { toast('A schedule must keep at least one period.', true); return; }
       if (!window.confirm('Remove “' + name + '” from ' + dropdown.value + '?')) return;
       const payload = {period_name:name, selected_schedule:dropdown.value};
-      request('/db/delete_period', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+      request('/db/delete_period', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
         .then(function () { toast('Period removed'); loadPeriods(); })
         .catch(function () { toast('Could not remove the period', true); });
     }
