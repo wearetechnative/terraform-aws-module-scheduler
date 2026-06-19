@@ -118,3 +118,11 @@ resource "aws_lambda_permission" "allow_API_create_schedule" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/create_schedule"
 }
+
+resource "aws_lambda_permission" "allow_API_delete_period_definition" {
+  statement_id  = "AllowExecutionFromApigatewayDeletePeriodDefinition"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/delete_period_definition"
+}

@@ -93,6 +93,24 @@ def handler(event, context):
             }
         )
 
+    def get_period_assignments():
+        response = dynamodb.query(
+            TableName=table_name,
+            KeyConditionExpression="#type = :schedule_type",
+            ExpressionAttributeValues={":schedule_type": {"S": "schedule"}},
+            ProjectionExpression="#name, periods",
+            ExpressionAttributeNames={
+                "#type": "type",
+                "#name": "name"
+            }
+        )
+        assignments = {}
+        for schedule in response.get("Items", []):
+            schedule_name = schedule["name"]["S"]
+            for period_name in schedule.get("periods", {}).get("SS", []):
+                assignments.setdefault(period_name, []).append(schedule_name)
+        return assignments
+
     
     if path == '/db':
         response = table.query(
@@ -192,7 +210,12 @@ def handler(event, context):
             ExpressionAttributeNames={"#type": "type"},
             ExpressionAttributeValues={":period_type": {"S": "period"}}
         )
-        return json_response(200, {"period_list": response.get("Items", [])})
+        period_list = response.get("Items", [])
+        assignments = get_period_assignments()
+        for period in period_list:
+            period_name = period["name"]["S"]
+            period["schedules"] = assignments.get(period_name, [])
+        return json_response(200, {"period_list": period_list})
 
     elif path == '/db/list_periods':
         print(f'the event is {event}')
@@ -262,6 +285,48 @@ def handler(event, context):
                 {"message": "period created", "period_name": period["period_name"]}
             )
         return json_response(400, {"message": "Period data is required"})
+
+    elif path == '/db/delete_period_definition':
+        delete_item = event.get('body')
+        if delete_item is None:
+            return json_response(400, {"message": "Period data is required"})
+
+        delete_item = json.loads(delete_item)
+        period_name = delete_item.get("period_name", "").strip()
+        if not period_name:
+            return json_response(400, {"message": "A period name is required"})
+
+        schedules = get_period_assignments().get(period_name, [])
+        if schedules:
+            return json_response(
+                409,
+                {
+                    "message": "Period is still assigned to schedules",
+                    "schedules": schedules
+                }
+            )
+
+        try:
+            dynamodb.delete_item(
+                TableName=table_name,
+                Key={
+                    "type": {"S": "period"},
+                    "name": {"S": period_name}
+                },
+                ConditionExpression="attribute_exists(#name)",
+                ExpressionAttributeNames={"#name": "name"}
+            )
+        except ClientError as error:
+            if error.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                return json_response(
+                    404,
+                    {"message": f'Period "{period_name}" was not found'}
+                )
+            raise
+        return json_response(
+            200,
+            {"message": "period deleted", "period_name": period_name}
+        )
 
     elif path == '/db/assign_period':
         assignment = event.get('body')

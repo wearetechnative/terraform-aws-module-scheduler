@@ -52,6 +52,9 @@
     .day { width:28px; height:27px; display:grid; place-items:center; border-radius:7px; color:#536058; background:#eef1ec; font-size:10px; font-weight:750; text-transform:uppercase; }
     .time { font-variant-numeric:tabular-nums; font-weight:650; }
     .timezone { color:var(--muted); font-size:12px; }
+    .schedule-tags { display:flex; flex-wrap:wrap; gap:5px; min-width:130px; }
+    .schedule-tag { padding:4px 7px; border-radius:7px; color:#465149; background:#eef1ec; font-size:10px; font-weight:700; }
+    .unassigned { color:#8a6c2f; font-size:11px; font-weight:700; }
     .state { padding:66px 20px; text-align:center; color:var(--muted); }
     .state-icon { width:45px; height:45px; margin:0 auto 12px; display:grid; place-items:center; border-radius:13px; background:#f0f3ed; color:var(--ink); font-size:19px; }
     .state strong { display:block; color:var(--ink); margin-bottom:4px; }
@@ -101,8 +104,8 @@
         <div class="panel-head"><div><h2 id="panelTitle">Schedule periods</h2><span id="periodCount">Select a schedule to continue</span></div></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Period name</th><th>Days</th><th>Start</th><th>Stop</th><th>Timezone</th><th>Action</th></tr></thead>
-            <tbody id="periodRows"><tr><td colspan="6"><div class="state"><div class="state-icon">◷</div><strong>No schedule selected</strong>Choose a schedule above to view its periods.</div></td></tr></tbody>
+            <thead><tr><th>Period name</th><th>Days</th><th>Start</th><th>Stop</th><th>Timezone</th><th>Schedules</th><th>Action</th></tr></thead>
+            <tbody id="periodRows"><tr><td colspan="7"><div class="state"><div class="state-icon">◷</div><strong>No schedule selected</strong>Choose a schedule above to view its periods.</div></td></tr></tbody>
           </table>
         </div>
       </section>
@@ -158,7 +161,7 @@
       rows.innerHTML = '';
       document.getElementById('periodCount').textContent = periods.length + (periods.length === 1 ? ' period' : ' periods') + (showingAll ? ' total' : ' assigned');
       if (!periods.length && !adding && !assigning) {
-        rows.innerHTML = '<tr><td colspan="6"><div class="state"><div class="state-icon">◷</div><strong>No periods found</strong>' + (showingAll ? 'Create a period to make it available for future schedules.' : 'This schedule does not have any assigned periods.') + '</div></td></tr>';
+        rows.innerHTML = '<tr><td colspan="7"><div class="state"><div class="state-icon">◷</div><strong>No periods found</strong>' + (showingAll ? 'Create a period to make it available for future schedules.' : 'This schedule does not have any assigned periods.') + '</div></td></tr>';
         return;
       }
       periods.forEach(function (period) {
@@ -167,6 +170,7 @@
         const beginTime = attributeValue(period.begintime, '');
         const endTime = attributeValue(period.endtime, '');
         const periodTimezone = attributeValue(period.timezone, '');
+        const assignedSchedules = attributeValue(period.schedules, showingAll ? [] : [dropdown.value]);
         const row = document.createElement('tr');
         const name = document.createElement('td'); name.className = 'period-name'; name.textContent = periodName;
         const daysCell = document.createElement('td'); const days = document.createElement('div'); days.className = 'days';
@@ -175,15 +179,37 @@
         const start = document.createElement('td'); start.className = 'time'; start.textContent = beginTime;
         const end = document.createElement('td'); end.className = 'time'; end.textContent = endTime;
         const zone = document.createElement('td'); zone.className = 'timezone'; zone.textContent = periodTimezone;
+        const scheduleCell = document.createElement('td');
+        const scheduleTags = document.createElement('div');
+        scheduleTags.className = 'schedule-tags';
+        if (assignedSchedules.length) {
+          assignedSchedules.forEach(function (scheduleName) {
+            const tag = document.createElement('span');
+            tag.className = 'schedule-tag';
+            tag.textContent = scheduleName;
+            scheduleTags.appendChild(tag);
+          });
+        } else {
+          scheduleTags.innerHTML = '<span class="unassigned">Unassigned</span>';
+        }
+        scheduleCell.appendChild(scheduleTags);
         const action = document.createElement('td');
         if (showingAll) {
-          action.textContent = 'Available';
-          action.className = 'timezone';
+          if (!assignedSchedules.length) {
+            const button = document.createElement('button');
+            button.className = 'btn danger';
+            button.textContent = 'Delete';
+            button.addEventListener('click', function () { deletePeriodDefinition(periodName); });
+            action.appendChild(button);
+          } else {
+            action.textContent = 'In use';
+            action.className = 'timezone';
+          }
         } else {
           const button = document.createElement('button'); button.className = 'btn danger'; button.textContent = 'Remove';
           button.addEventListener('click', function () { removePeriod(periodName); }); action.appendChild(button);
         }
-        row.appendChild(name); row.appendChild(daysCell); row.appendChild(start); row.appendChild(end); row.appendChild(zone); row.appendChild(action);
+        row.appendChild(name); row.appendChild(daysCell); row.appendChild(start); row.appendChild(end); row.appendChild(zone); row.appendChild(scheduleCell); row.appendChild(action);
         rows.appendChild(row);
       });
       if (adding) renderForm();
@@ -209,6 +235,7 @@
         '<td><label class="field-label" for="beginTime">Start time</label><input id="beginTime" type="time" value="09:00"></td>' +
         '<td><label class="field-label" for="endTime">Stop time</label><input id="endTime" type="time" value="17:00"></td>' +
         '<td><label class="field-label" for="timezone">Timezone</label><select id="timezone"><option>Europe/Amsterdam</option><option>Europe/London</option><option>UTC</option><option>America/New_York</option><option>America/Los_Angeles</option><option>Asia/Kolkata</option><option>Asia/Singapore</option><option>Australia/Sydney</option></select></td>' +
+        '<td><span class="field-label">Schedules</span><span class="unassigned">' + (dropdown.value === '__all__' ? 'Unassigned' : escapeHtml(dropdown.value)) + '</span></td>' +
         '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="savePeriod">Save</button><button class="btn ghost" id="cancelPeriod">Cancel</button></div></td>';
       rows.appendChild(row);
       document.getElementById('savePeriod').addEventListener('click', savePeriod);
@@ -224,7 +251,7 @@
     function renderAssignmentForm() {
       const row = document.createElement('tr');
       row.className = 'form-row';
-      row.innerHTML = '<td colspan="5"><label class="field-label" for="existingPeriod">Existing unassigned period</label><select id="existingPeriod"><option value="">Loading available periods…</option></select></td>' +
+      row.innerHTML = '<td colspan="6"><label class="field-label" for="existingPeriod">Existing period</label><select id="existingPeriod"><option value="">Loading available periods…</option></select></td>' +
         '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="confirmAssignment" disabled>Assign</button><button class="btn ghost" id="cancelAssignment">Cancel</button></div></td>';
       rows.appendChild(row);
 
@@ -297,12 +324,12 @@
         periods = [];
         document.getElementById('panelTitle').textContent = 'Schedule periods';
         document.getElementById('periodCount').textContent = 'Select a schedule to continue';
-        rows.innerHTML = '<tr><td colspan="6"><div class="state"><div class="state-icon">◷</div><strong>No schedule selected</strong>Choose a schedule above to view its periods.</div></td></tr>';
+        rows.innerHTML = '<tr><td colspan="7"><div class="state"><div class="state-icon">◷</div><strong>No schedule selected</strong>Choose a schedule above to view its periods.</div></td></tr>';
         return;
       }
       const showingAll = schedule === '__all__';
       document.getElementById('panelTitle').textContent = showingAll ? 'All periods' : schedule;
-      rows.innerHTML = '<tr><td colspan="6"><div class="state">Loading periods…</div></td></tr>';
+      rows.innerHTML = '<tr><td colspan="7"><div class="state">Loading periods…</div></td></tr>';
       const requestPath = showingAll ? '/db/periods' : '/db/list_periods';
       const requestOptions = showingAll ? undefined : {
         method:'POST',
@@ -313,7 +340,7 @@
         .then(function (data) { periods = data.period_list || []; render(); })
         .catch(function (error) {
           console.error('Period loading failed:', error);
-          rows.innerHTML = '<tr><td colspan="6"><div class="state"><strong>Could not load periods</strong>' + escapeHtml(error.message || 'Check the API and try again.') + '</div></td></tr>';
+          rows.innerHTML = '<tr><td colspan="7"><div class="state"><strong>Could not load periods</strong>' + escapeHtml(error.message || 'Check the API and try again.') + '</div></td></tr>';
           toast('Could not load periods', true);
         });
     }
@@ -347,6 +374,23 @@
       request('/db/delete_period', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
         .then(function () { toast('Period removed'); loadPeriods(); })
         .catch(function () { toast('Could not remove the period', true); });
+    }
+
+    function deletePeriodDefinition(name) {
+      if (!window.confirm('Permanently delete the unassigned period “' + name + '”?')) return;
+      request('/db/delete_period_definition', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({period_name:name})
+      })
+        .then(function () {
+          toast('Period deleted');
+          loadPeriods();
+        })
+        .catch(function (error) {
+          console.error('Period deletion failed:', error);
+          toast('Could not delete period: ' + error.message, true);
+        });
     }
 
     function populateSchedules(schedules) {
