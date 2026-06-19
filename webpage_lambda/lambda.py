@@ -30,7 +30,15 @@ def handler(event, context):
         print(f'dynamodb response is {response}')
         items = response.get('Item')
         if not items:
-            raise ValueError(f'Schedule "{s}" was not found')
+            dynamodb.put_item(
+                TableName=table_name,
+                Item={
+                    "type": {"S": "schedule"},
+                    "name": {"S": s},
+                    "periods": {"SS": [p]}
+                }
+            )
+            return
 
         item = items.get('periods', {})
         print(f'item is {item}')
@@ -75,7 +83,15 @@ def handler(event, context):
 
     if path == '/db/list_periods':
         print(f'the event is {event}')
-        schedule=event.get('body')
+        schedule = event.get('body')
+        try:
+            request_body = json.loads(schedule)
+            if isinstance(request_body, dict):
+                schedule = request_body.get('schedule_name')
+            elif isinstance(request_body, str):
+                schedule = request_body
+        except (TypeError, json.JSONDecodeError):
+            pass
         print(schedule)
         if schedule != None:
             response = dynamodb.get_item(
@@ -94,10 +110,7 @@ def handler(event, context):
 
             items = response.get('Item')
             if not items:
-                return json_response(
-                    404,
-                    {"message": f'Schedule "{schedule}" was not found'}
-                )
+                return json_response(200, {'period_list': []})
 
             item = items.get('periods', {})
             print(f'item is {item}')

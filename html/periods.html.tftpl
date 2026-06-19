@@ -216,9 +216,23 @@
       }
       document.getElementById('panelTitle').textContent = schedule;
       rows.innerHTML = '<tr><td colspan="6"><div class="state">Loading periods…</div></td></tr>';
-      request('/db/list_periods', {method:'POST', headers:{'Content-Type':'application/json'}, body:schedule})
+      request('/db/list_periods', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({schedule_name:schedule})
+      })
         .then(function (data) { periods = data.period_list || []; render(); })
-        .catch(function () { rows.innerHTML = '<tr><td colspan="6"><div class="state"><strong>Could not load periods</strong>Check the API and try again.</div></td></tr>'; toast('Could not load periods', true); });
+        .catch(function (error) {
+          console.error('Period loading failed:', error);
+          rows.innerHTML = '<tr><td colspan="6"><div class="state"><strong>Could not load periods</strong>' + escapeHtml(error.message || 'Check the API and try again.') + '</div></td></tr>';
+          toast('Could not load periods', true);
+        });
+    }
+
+    function escapeHtml(value) {
+      const element = document.createElement('div');
+      element.textContent = value;
+      return element.innerHTML;
     }
 
     function savePeriod() {
