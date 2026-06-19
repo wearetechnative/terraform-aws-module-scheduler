@@ -69,6 +69,29 @@ def handler(event, context):
         )
         print(f'response is {response}')
 
+    def save_period(period):
+        dynamodb.update_item(
+            TableName=table_name,
+            Key={
+                "type": {"S": "period"},
+                "name": {"S": period["period_name"]}
+            },
+            AttributeUpdates={
+                "begintime": {
+                    "Value": {"S": period["begin_time"]}
+                },
+                "endtime": {
+                    "Value": {"S": period["end_time"]}
+                },
+                "days": {
+                    "Value": {"SS": period["selected_days"]}
+                },
+                "timezone": {
+                    "Value": {"S": period["timezone"]}
+                }
+            }
+        )
+
     
     if path == '/db':
         response = table.query(
@@ -84,7 +107,16 @@ def handler(event, context):
             
         return json_response(200, {'schedules_list': schedule})
 
-    if path == '/db/list_periods':
+    if path == '/db/periods':
+        response = dynamodb.query(
+            TableName=table_name,
+            KeyConditionExpression="#type = :period_type",
+            ExpressionAttributeNames={"#type": "type"},
+            ExpressionAttributeValues={":period_type": {"S": "period"}}
+        )
+        return json_response(200, {"period_list": response.get("Items", [])})
+
+    elif path == '/db/list_periods':
         print(f'the event is {event}')
         schedule = event.get('body')
         try:
@@ -141,44 +173,24 @@ def handler(event, context):
         
             return json_response(200, {'period_list': list_p})
         return json_response(400, {"message": "A schedule name is required"})
+
+    elif path == '/db/create_period':
+        period = event.get('body')
+        if period is not None:
+            period = json.loads(period)
+            save_period(period)
+            return json_response(
+                200,
+                {"message": "period created", "period_name": period["period_name"]}
+            )
+        return json_response(400, {"message": "Period data is required"})
+
     elif path == '/db/add_period':
         period=event.get('body')
         print(period)
         if period != None:
             period = json.loads(period)
-            response = dynamodb.update_item(
-                TableName = table_name,
-                Key={
-                    'type': {
-                        'S': 'period',
-                    },
-                    'name':{
-                        'S': period["period_name"],
-                    }
-                }, 
-                AttributeUpdates={
-                    "begintime": {
-                        "Value": {
-                            "S": period["begin_time"]
-                        }
-                    },
-                    "endtime": {
-                        "Value": {
-                            "S": period["end_time"]
-                        }
-                    },
-                    "days": {
-                        "Value": {
-                            "SS": period["selected_days"]
-                        }
-                    },
-                    "timezone": {
-                        "Value": {
-                            "S": period["timezone"]
-                        }
-                    }
-                }    
-            ) 
+            save_period(period)
             schedule = period["schedule_name"]
             p_of_schedule = period["period_name"]
             add_period_to_schedule(p_of_schedule, schedule)   

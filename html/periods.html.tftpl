@@ -91,7 +91,7 @@
         <button class="btn accent" id="addButton" disabled>+ Add period</button>
       </header>
       <section class="selector-card">
-        <div><label for="scheduleDropdown">Schedule</label><p>Select a schedule to inspect and edit its operating periods.</p></div>
+        <div><label for="scheduleDropdown">View</label><p>Browse every period, including unassigned periods, or filter by schedule.</p></div>
         <div><select id="scheduleDropdown" disabled><option value="">Loading schedules…</option></select></div>
       </section>
       <section class="panel">
@@ -149,10 +149,11 @@
     }
 
     function render() {
+      const showingAll = dropdown.value === '__all__';
       rows.innerHTML = '';
-      document.getElementById('periodCount').textContent = periods.length + (periods.length === 1 ? ' period assigned' : ' periods assigned');
+      document.getElementById('periodCount').textContent = periods.length + (periods.length === 1 ? ' period' : ' periods') + (showingAll ? ' total' : ' assigned');
       if (!periods.length && !adding) {
-        rows.innerHTML = '<tr><td colspan="6"><div class="state"><div class="state-icon">◷</div><strong>No periods returned</strong>This schedule does not have any readable periods.</div></td></tr>';
+        rows.innerHTML = '<tr><td colspan="6"><div class="state"><div class="state-icon">◷</div><strong>No periods found</strong>' + (showingAll ? 'Create a period to make it available for future schedules.' : 'This schedule does not have any assigned periods.') + '</div></td></tr>';
         return;
       }
       periods.forEach(function (period) {
@@ -169,8 +170,14 @@
         const start = document.createElement('td'); start.className = 'time'; start.textContent = beginTime;
         const end = document.createElement('td'); end.className = 'time'; end.textContent = endTime;
         const zone = document.createElement('td'); zone.className = 'timezone'; zone.textContent = periodTimezone;
-        const action = document.createElement('td'); const button = document.createElement('button'); button.className = 'btn danger'; button.textContent = 'Remove';
-        button.addEventListener('click', function () { removePeriod(periodName); }); action.appendChild(button);
+        const action = document.createElement('td');
+        if (showingAll) {
+          action.textContent = 'Available';
+          action.className = 'timezone';
+        } else {
+          const button = document.createElement('button'); button.className = 'btn danger'; button.textContent = 'Remove';
+          button.addEventListener('click', function () { removePeriod(periodName); }); action.appendChild(button);
+        }
         row.appendChild(name); row.appendChild(daysCell); row.appendChild(start); row.appendChild(end); row.appendChild(zone); row.appendChild(action);
         rows.appendChild(row);
       });
@@ -214,13 +221,16 @@
         rows.innerHTML = '<tr><td colspan="6"><div class="state"><div class="state-icon">◷</div><strong>No schedule selected</strong>Choose a schedule above to view its periods.</div></td></tr>';
         return;
       }
-      document.getElementById('panelTitle').textContent = schedule;
+      const showingAll = schedule === '__all__';
+      document.getElementById('panelTitle').textContent = showingAll ? 'All periods' : schedule;
       rows.innerHTML = '<tr><td colspan="6"><div class="state">Loading periods…</div></td></tr>';
-      request('/db/list_periods', {
+      const requestPath = showingAll ? '/db/periods' : '/db/list_periods';
+      const requestOptions = showingAll ? undefined : {
         method:'POST',
         headers:{'Content-Type':'text/plain;charset=UTF-8'},
         body:JSON.stringify({schedule_name:schedule})
-      })
+      };
+      request(requestPath, requestOptions)
         .then(function (data) { periods = data.period_list || []; render(); })
         .catch(function (error) {
           console.error('Period loading failed:', error);
@@ -242,10 +252,12 @@
       const end = document.getElementById('endTime').value;
       if (!name || !selectedDays.length || !begin || !end) { toast('Enter a name, times, and at least one weekday.', true); return; }
       if (periods.some(function (item) { return attributeValue(item.name, '') === name; })) { toast('This schedule already contains that period.', true); return; }
-      const payload = {period_name:name, selected_days:selectedDays, begin_time:begin, end_time:end, timezone:document.getElementById('timezone').value, schedule_name:dropdown.value};
+      const showingAll = dropdown.value === '__all__';
+      const payload = {period_name:name, selected_days:selectedDays, begin_time:begin, end_time:end, timezone:document.getElementById('timezone').value};
+      if (!showingAll) payload.schedule_name = dropdown.value;
       document.getElementById('savePeriod').disabled = true;
-      request('/db/add_period', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
-        .then(function () { adding = false; toast('Period added to ' + dropdown.value); loadPeriods(); })
+      request(showingAll ? '/db/create_period' : '/db/add_period', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
+        .then(function () { adding = false; toast(showingAll ? 'Unassigned period created' : 'Period added to ' + dropdown.value); loadPeriods(); })
         .catch(function () { toast('Could not add the period', true); document.getElementById('savePeriod').disabled = false; });
     }
 
@@ -259,20 +271,17 @@
     }
 
     function populateSchedules(schedules) {
-        dropdown.innerHTML = '<option value="">Choose a schedule…</option>';
+        dropdown.innerHTML = '<option value="__all__">All periods</option><option value="" disabled>──────────</option>';
         schedules.forEach(function (name) {
           const option = document.createElement('option');
           option.value = name;
           option.textContent = name;
           dropdown.appendChild(option);
         });
-        dropdown.disabled = schedules.length === 0;
-        if (!schedules.length) {
-          dropdown.innerHTML = '<option value="">No schedules available</option>';
-          throw new Error('No schedules are configured');
-        }
+        dropdown.disabled = false;
         const requested = new URLSearchParams(window.location.search).get('schedule');
-        if (requested && Array.from(dropdown.options).some(function (option) { return option.value === requested; })) { dropdown.value = requested; loadPeriods(); }
+        dropdown.value = requested && Array.from(dropdown.options).some(function (option) { return option.value === requested; }) ? requested : '__all__';
+        loadPeriods();
     }
 
     request('/db')
@@ -282,14 +291,8 @@
       })
       .catch(function (error) {
         console.error('Schedule API loading failed:', error);
-        if (configuredSchedules.length) {
-          populateSchedules(configuredSchedules);
-          toast('Using schedules from the Terraform configuration', false);
-          return;
-        }
-        dropdown.disabled = true;
-        dropdown.innerHTML = '<option value="">Could not load schedules</option>';
-        toast('Could not load schedules', true);
+        populateSchedules(configuredSchedules);
+        toast(configuredSchedules.length ? 'Using schedules from the Terraform configuration' : 'Schedule API unavailable; showing all periods', false);
       });
 
     dropdown.addEventListener('change', loadPeriods);

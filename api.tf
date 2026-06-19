@@ -66,3 +66,19 @@ resource "aws_lambda_permission" "allow_API_3" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/delete_period"
 }
+
+resource "aws_lambda_permission" "allow_API_periods" {
+  statement_id  = "AllowExecutionFromApigatewayPeriods"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/periods"
+}
+
+resource "aws_lambda_permission" "allow_API_create_period" {
+  statement_id  = "AllowExecutionFromApigatewayCreatePeriod"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/create_period"
+}
