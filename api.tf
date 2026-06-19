@@ -21,10 +21,30 @@ resource "aws_apigatewayv2_integration" "int" {
 }
 
 resource "aws_apigatewayv2_route" "my_route" {
-  count     = length(local.webpage_api_routes)
+  for_each  = toset(local.webpage_api_routes)
   api_id    = aws_apigatewayv2_api.my_api.id
-  route_key = local.webpage_api_routes[count.index]
+  route_key = each.value
   target    = "integrations/${aws_apigatewayv2_integration.int.id}"
+}
+
+moved {
+  from = aws_apigatewayv2_route.my_route[0]
+  to   = aws_apigatewayv2_route.my_route["ANY /db"]
+}
+
+moved {
+  from = aws_apigatewayv2_route.my_route[1]
+  to   = aws_apigatewayv2_route.my_route["ANY /db/list_periods"]
+}
+
+moved {
+  from = aws_apigatewayv2_route.my_route[2]
+  to   = aws_apigatewayv2_route.my_route["ANY /db/add_period"]
+}
+
+moved {
+  from = aws_apigatewayv2_route.my_route[3]
+  to   = aws_apigatewayv2_route.my_route["ANY /db/delete_period"]
 }
 
 
