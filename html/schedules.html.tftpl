@@ -1,107 +1,190 @@
-
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>API Gateway Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17201c">
+  <title>Schedules · Instance Scheduler</title>
   <style>
-    /* Table styles */
-    table {
-      width: 100%;
-      border-collapse: collapse; /* Makes sure borders between cells are combined */
-    }
-    th, td {
-      border: 1px solid black; /* Adds borders to each cell */
-      padding: 8px;  /* Adds space inside each cell */
-      text-align: left; /* Aligns text to the left */
-    }
-    th {
-      background-color: #f2f2f2; /* Light gray background for header cells */
-    }
+    :root { --ink:#17201c; --muted:#69736d; --line:#e2e6e3; --paper:#f5f6f2; --card:#fff; --accent:#d8ff5f; --dark:#17201c; --danger:#b83d3d; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:inherit; text-decoration:none; }
+    .shell { min-height:100vh; display:grid; grid-template-columns:248px 1fr; }
+    .sidebar { position:sticky; top:0; height:100vh; padding:28px 20px; background:var(--dark); color:#fff; display:flex; flex-direction:column; }
+    .brand { display:flex; align-items:center; gap:11px; font-weight:750; letter-spacing:-.02em; padding:0 8px 34px; }
+    .brand-mark { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:var(--accent); color:var(--dark); }
+    .nav-label { margin:0 10px 9px; color:#89938e; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.11em; }
+    .nav { display:grid; gap:6px; }
+    .nav a { display:flex; gap:12px; align-items:center; padding:11px 12px; border-radius:10px; color:#aeb8b2; font-weight:600; }
+    .nav a:hover,.nav a.active { color:#fff; background:#26312c; }
+    .nav a.active::before { content:""; width:4px; height:18px; border-radius:9px; background:var(--accent); margin-left:-12px; }
+    .nav svg { width:18px; height:18px; }
+    .sidebar-foot { margin-top:auto; padding:16px; border:1px solid #35413b; border-radius:14px; color:#9da8a2; font-size:12px; }
+    .sidebar-foot strong { display:block; color:#fff; font-size:13px; margin-bottom:4px; }
+    main { padding:36px 44px 60px; min-width:0; }
+    .topbar { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:30px; }
+    .eyebrow { margin:0 0 5px; color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
+    h1 { margin:0; font-size:clamp(30px,3vw,42px); line-height:1.08; letter-spacing:-.045em; }
+    .subtitle { margin:8px 0 0; color:var(--muted); }
+    .btn { min-height:42px; padding:0 16px; display:inline-flex; align-items:center; gap:8px; border:0; border-radius:10px; background:var(--dark); color:#fff; font-weight:700; cursor:pointer; }
+    .btn.accent { background:var(--accent); color:var(--dark); }
+    .summary { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
+    .summary-card { padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; }
+    .summary-card span { color:var(--muted); font-size:12px; font-weight:650; }
+    .summary-card strong { display:block; margin-top:4px; font-size:23px; letter-spacing:-.03em; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+    .toolbar { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:17px 20px; border-bottom:1px solid var(--line); }
+    .search { width:min(330px,100%); position:relative; }
+    .search svg { position:absolute; left:12px; top:12px; width:17px; color:var(--muted); }
+    .search input { width:100%; height:41px; padding:0 12px 0 38px; border:1px solid var(--line); border-radius:9px; background:#fafbf9; font:inherit; outline:none; }
+    .search input:focus { border-color:#a8b19f; box-shadow:0 0 0 3px #eff3e8; }
+    .count { color:var(--muted); font-size:12px; font-weight:650; }
+    table { width:100%; border-collapse:collapse; }
+    th { padding:13px 20px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    td { padding:17px 20px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    tbody tr:last-child td { border-bottom:0; }
+    tbody tr:hover { background:#fcfdfb; }
+    .name { display:flex; align-items:center; gap:12px; font-weight:730; }
+    .name-icon { width:35px; height:35px; border-radius:10px; display:grid; place-items:center; background:#eff3ea; }
+    .period-tags { display:flex; flex-wrap:wrap; gap:6px; }
+    .tag { padding:5px 9px; border-radius:7px; color:#465149; background:#f0f2ef; font-size:11px; font-weight:650; }
+    .status { display:inline-flex; align-items:center; gap:7px; padding:5px 9px; border-radius:999px; color:#25704b; background:#eaf7ef; font-size:11px; font-weight:750; }
+    .status::before { content:""; width:6px; height:6px; border-radius:50%; background:#4ba979; }
+    .action { color:#59645e; font-weight:700; font-size:12px; }
+    .state { padding:60px 20px; text-align:center; color:var(--muted); }
+    .state strong { display:block; color:var(--ink); margin-bottom:5px; }
+    .skeleton td div { height:30px; border-radius:8px; background:linear-gradient(90deg,#f1f3f0 25%,#fafbfa 37%,#f1f3f0 63%); background-size:400% 100%; animation:shimmer 1.4s infinite; }
+    @keyframes shimmer { from { background-position:100% 0; } to { background-position:0 0; } }
+    @media (max-width:900px) { .shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:18px 20px}.brand{padding-bottom:15px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}main{padding:28px 20px 50px}.summary{grid-template-columns:1fr 1fr}.table-wrap{overflow-x:auto}table{min-width:720px} }
+    @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.search{width:100%} }
   </style>
 </head>
-
 <body>
-  <h1 style="background-color:grey;">Create New Schedules</h1>
-  <label for="dynamodb">Below are the schedules:</label>
-  <ol id="s_list"></ol><br>
-  <button id="schedule_button"></button>
-  <table>
-   <tr>
-      <th>Schedules</th>
-      <th>Periods</th>  
-      <th>Days</th>
-      <th>BeginTime</th>
-      <th>EndTime</th>
-      <th>TimeZone</th>
-      <th>Add/Remove Schedules</th>
-    </tr>
-   <tr>
-   <td rowspan="3">Foodscheduler</td>
-   <td>Lunch</td>
-   <td>"mon"</td>
-   <td>"12:00"</td>
-   <td>"4:00"</td>
-   <td>"Europe/Amsterdam"</td>
-   <td rowspan=3> <input type="button" value="Delete" onclick="deleteRow(this)"/> </td>
-   </tr> 
-   <tr>
-   <td>Dinner</td>
-   <td>"mon"</td>
-   <td>"12:00"</td>
-   <td>"4:00"</td>
-   <td>"Europe/Amsterdam"</td>
-   </tr>
-   
-  <tbody id="table-body">
-   </tbody>
-</table><br>
-<script>
- function list_schedule(){
-     fetch('${api_url}/db')
-     .then(response => response.json())
-     .then(data => {
-              data.schedules_list.forEach(function(id) {
-               schedule = id
-               console.log(schedule)
-               create_tableRow(schedule)
-              });
-     })
-     }
- function create_tableRow(data){
-   schedule = data
-   list_period(schedule)
-   
-   const tableBody = document.getElementById('table-body');
-   const row = document.createElement('tr');
-   const nameCell = document.createElement('td');
-   nameCell.textContent = data;
-   nameCell.rowspan = "3";
-   row.appendChild(nameCell);
-   tableBody.appendChild(row);
-   }
- function list_period(data){
-       schedule = data
-       
-       fetch('${api_url}/db/list_periods', {
-        method: "POST", // Or GET with query params
-        body: schedule,
-        headers: {
-          "Content-Type": "application/json"
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="index.html"><span class="brand-mark"><svg viewBox="0 0 24 24" width="19" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v9l5 3"/><circle cx="12" cy="12" r="9"/></svg></span>Instance Scheduler</a>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav">
+        <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg> Overview</a>
+        <a class="active" href="schedules.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> Schedules</a>
+        <a href="periods.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Periods</a>
+      </nav>
+      <div class="sidebar-foot"><strong>Configuration source</strong>Schedule names are provisioned by Terraform and stored in DynamoDB.</div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">Automation</p><h1>Schedules</h1><p class="subtitle">Review your instance operating windows and their assigned periods.</p></div>
+        <a class="btn accent" href="periods.html">Manage periods →</a>
+      </header>
+      <section class="summary">
+        <div class="summary-card"><span>Total schedules</span><strong id="totalCount">—</strong></div>
+        <div class="summary-card"><span>Active schedules</span><strong id="activeCount">—</strong></div>
+        <div class="summary-card"><span>Configuration</span><strong>Terraform</strong></div>
+      </section>
+      <section class="panel">
+        <div class="toolbar">
+          <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="search" type="search" placeholder="Search schedules…" aria-label="Search schedules"></div>
+          <div class="count" id="resultCount">Loading schedules…</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Schedule</th><th>Assigned periods</th><th>Status</th><th></th></tr></thead>
+            <tbody id="scheduleRows">
+              <tr class="skeleton"><td><div></div></td><td><div></div></td><td><div></div></td><td><div></div></td></tr>
+              <tr class="skeleton"><td><div></div></td><td><div></div></td><td><div></div></td><td><div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const apiUrl = '${api_url}';
+    const body = document.getElementById('scheduleRows');
+    let schedules = [];
+
+    function getPeriods(name) {
+      return fetch(apiUrl + '/db/list_periods', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: name
+      }).then(function (response) {
+        if (!response.ok) throw new Error('Could not load periods');
+        return response.json();
+      }).then(function (data) {
+        return (data.period_list || []).map(function (item) { return item.name.S; });
+      }).catch(function () { return []; });
+    }
+
+    function render(filter) {
+      const query = (filter || '').trim().toLowerCase();
+      const visible = schedules.filter(function (item) { return item.name.toLowerCase().includes(query); });
+      body.innerHTML = '';
+      document.getElementById('resultCount').textContent = visible.length + (visible.length === 1 ? ' schedule' : ' schedules');
+      if (!visible.length) {
+        body.innerHTML = '<tr><td colspan="4"><div class="state"><strong>No schedules found</strong>Try a different search term.</div></td></tr>';
+        return;
+      }
+      visible.forEach(function (item) {
+        const row = document.createElement('tr');
+        const nameCell = document.createElement('td');
+        const nameWrap = document.createElement('div');
+        nameWrap.className = 'name';
+        nameWrap.innerHTML = '<span class="name-icon">↗</span><span></span>';
+        nameWrap.querySelector('span:last-child').textContent = item.name;
+        nameCell.appendChild(nameWrap);
+
+        const periodsCell = document.createElement('td');
+        const tags = document.createElement('div');
+        tags.className = 'period-tags';
+        if (item.periods.length) {
+          item.periods.forEach(function (period) {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = period;
+            tags.appendChild(tag);
+          });
+        } else {
+          tags.innerHTML = '<span class="tag">No periods returned</span>';
         }
+        periodsCell.appendChild(tags);
+
+        const statusCell = document.createElement('td');
+        statusCell.innerHTML = '<span class="status">Active</span>';
+        const actionCell = document.createElement('td');
+        const link = document.createElement('a');
+        link.className = 'action';
+        link.href = 'periods.html?schedule=' + encodeURIComponent(item.name);
+        link.textContent = 'Open →';
+        actionCell.appendChild(link);
+        row.appendChild(nameCell); row.appendChild(periodsCell); row.appendChild(statusCell); row.appendChild(actionCell);
+        body.appendChild(row);
+      });
+    }
+
+    fetch(apiUrl + '/db')
+      .then(function (response) { if (!response.ok) throw new Error('API unavailable'); return response.json(); })
+      .then(function (data) {
+        const names = data.schedules_list || [];
+        return Promise.all(names.map(function (name) {
+          return getPeriods(name).then(function (periods) { return {name:name, periods:periods}; });
+        }));
       })
-      
-      .then(response => response.json())
-     // .then(data => response)
-      .catch(error => console.error('Error checking schedule:', error));
-    
-     
-    }  
-   
- list_schedule()
- 
- </script>
- </body>
- </html>
- 
+      .then(function (items) {
+        schedules = items;
+        document.getElementById('totalCount').textContent = items.length;
+        document.getElementById('activeCount').textContent = items.length;
+        render('');
+      })
+      .catch(function () {
+        document.getElementById('totalCount').textContent = '—';
+        document.getElementById('activeCount').textContent = '—';
+        document.getElementById('resultCount').textContent = 'API unavailable';
+        body.innerHTML = '<tr><td colspan="4"><div class="state"><strong>Could not load schedules</strong>Check the API Gateway and Lambda configuration.</div></td></tr>';
+      });
 
-
+    document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
+  </script>
+</body>
+</html>
