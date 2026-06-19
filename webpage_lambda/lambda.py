@@ -7,6 +7,14 @@ def handler(event, context):
     db = boto3.resource('dynamodb')
     dynamodb = boto3.client('dynamodb')
     table = db.Table(table_name)
+
+    def json_response(status_code, body):
+        return {
+            "statusCode": status_code,
+            "headers": {"content-type": "application/json"},
+            "body": json.dumps(body)
+        }
+
     def add_period_to_schedule(p, s):
         response = dynamodb.get_item(
         TableName = table_name,
@@ -20,11 +28,15 @@ def handler(event, context):
         }
         )
         print(f'dynamodb response is {response}')
-        items  = response['Item']
-        item = items.get('periods')
+        items = response.get('Item')
+        if not items:
+            raise ValueError(f'Schedule "{s}" was not found')
+
+        item = items.get('periods', {})
         print(f'item is {item}')
-        period_list = item.get('SS')
-        period_list.append(p)
+        period_list = item.get('SS', [])
+        if p not in period_list:
+            period_list.append(p)
         print(f'period_list is {period_list}')
         response = dynamodb.update_item(
             TableName = table_name,
@@ -59,10 +71,7 @@ def handler(event, context):
             item = item.get('name')
             schedule.append(item)
             
-        return {
-                "statusCode" :200,
-                "body": json.dumps({'schedules_list': schedule})
-                } 
+        return json_response(200, {'schedules_list': schedule})
 
     if path == '/db/list_periods':
         print(f'the event is {event}')
@@ -83,10 +92,16 @@ def handler(event, context):
             print(f'dynamodb response is {response}')  
         
 
-            items  = response['Item']
-            item = items.get('periods')
+            items = response.get('Item')
+            if not items:
+                return json_response(
+                    404,
+                    {"message": f'Schedule "{schedule}" was not found'}
+                )
+
+            item = items.get('periods', {})
             print(f'item is {item}')
-            period = item.get('SS')
+            period = item.get('SS', [])
             print(f'period is {period}')
             list_p = []
             for p in period:
@@ -103,14 +118,13 @@ def handler(event, context):
                 }  
                 )
                 print(f'response_period is {response_period}')
-                if response_period.get('Item') != "<empty>":
-                    list_p.append(response_period.get('Item'))
+                period_item = response_period.get('Item')
+                if period_item:
+                    list_p.append(period_item)
             print(f'list_p is {list_p}')    
         
-            return {
-                    "statusCode" :200,
-                    "body": json.dumps({'period_list': list_p})
-                    } 
+            return json_response(200, {'period_list': list_p})
+        return json_response(400, {"message": "A schedule name is required"})
     elif path == '/db/add_period':
         period=event.get('body')
         print(period)
@@ -152,10 +166,11 @@ def handler(event, context):
             schedule = period["schedule_name"]
             p_of_schedule = period["period_name"]
             add_period_to_schedule(p_of_schedule, schedule)   
-            return {
-                        "statusCode" :200,
-                        "body": "success"
-                        } 
+            return json_response(
+                200,
+                {"message": "period added", "period_name": p_of_schedule}
+            )
+        return json_response(400, {"message": "Period data is required"})
     elif path == '/db/delete_period':
         delete_item=event.get('body')
         print(delete_item)
@@ -198,10 +213,8 @@ def handler(event, context):
                     }
                 }
             )
-            return {
-                "statusCode": 200,
-                "body": json.dumps({"message": "period removed"})
-            }
+            return json_response(200, {"message": "period removed"})
+        return json_response(400, {"message": "Period data is required"})
     else:   
         return {
                 "statusCode" :200,

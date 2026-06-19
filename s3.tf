@@ -13,9 +13,12 @@ resource "aws_s3_bucket_object" "object" {
 }
 
 resource "aws_s3_bucket_object" "object2" {
-  bucket       = aws_s3_bucket.webpage_bucket.id
-  key          = "periods.html"
-  content      = templatefile("${path.module}/html/periods.html.tftpl", { api_url = aws_apigatewayv2_api.my_api.api_endpoint })
+  bucket = aws_s3_bucket.webpage_bucket.id
+  key    = "periods.html"
+  content = templatefile("${path.module}/html/periods.html.tftpl", {
+    api_url        = aws_apigatewayv2_api.my_api.api_endpoint
+    schedule_names = jsonencode([for schedule in var.schedules : schedule.name])
+  })
   content_type = "text/html"
   etag         = filemd5("${path.module}/html/periods.html.tftpl")
 

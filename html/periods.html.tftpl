@@ -92,7 +92,7 @@
       </header>
       <section class="selector-card">
         <div><label for="scheduleDropdown">Schedule</label><p>Select a schedule to inspect and edit its operating periods.</p></div>
-        <div><select id="scheduleDropdown"><option value="">Choose a schedule…</option></select></div>
+        <div><select id="scheduleDropdown" disabled><option value="">Loading schedules…</option></select></div>
       </section>
       <section class="panel">
         <div class="panel-head"><div><h2 id="panelTitle">Schedule periods</h2><span id="periodCount">Select a schedule to continue</span></div></div>
@@ -108,6 +108,7 @@
   <div class="toast" id="toast" role="status"></div>
   <script>
     const apiUrl = '${api_url}';
+    const configuredSchedules = ${schedule_names};
     const dropdown = document.getElementById('scheduleDropdown');
     const rows = document.getElementById('periodRows');
     const addButton = document.getElementById('addButton');
@@ -123,9 +124,27 @@
 
     function request(path, options) {
       return fetch(apiUrl + path, options).then(function (response) {
-        if (!response.ok) throw new Error('Request failed');
-        const type = response.headers.get('content-type') || '';
-        return type.includes('application/json') ? response.json() : response.text();
+        return response.text().then(function (text) {
+          if (!response.ok) throw new Error(text || 'Request failed');
+          if (!text) return {};
+
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (error) {
+            return text;
+          }
+
+          // Also support invoking the Lambda response shape directly.
+          if (data && typeof data.body === 'string') {
+            try {
+              return JSON.parse(data.body);
+            } catch (error) {
+              return data.body;
+            }
+          }
+          return data;
+        });
       });
     }
 
@@ -137,20 +156,33 @@
         return;
       }
       periods.forEach(function (period) {
+        const periodName = attributeValue(period.name, '');
+        const periodDays = attributeValue(period.days, []);
+        const beginTime = attributeValue(period.begintime, '');
+        const endTime = attributeValue(period.endtime, '');
+        const periodTimezone = attributeValue(period.timezone, '');
         const row = document.createElement('tr');
-        const name = document.createElement('td'); name.className = 'period-name'; name.textContent = period.name.S;
+        const name = document.createElement('td'); name.className = 'period-name'; name.textContent = periodName;
         const daysCell = document.createElement('td'); const days = document.createElement('div'); days.className = 'days';
-        (period.days.SS || []).forEach(function (day) { const item = document.createElement('span'); item.className = 'day'; item.textContent = day; days.appendChild(item); });
+        periodDays.forEach(function (day) { const item = document.createElement('span'); item.className = 'day'; item.textContent = day; days.appendChild(item); });
         daysCell.appendChild(days);
-        const start = document.createElement('td'); start.className = 'time'; start.textContent = period.begintime.S;
-        const end = document.createElement('td'); end.className = 'time'; end.textContent = period.endtime.S;
-        const zone = document.createElement('td'); zone.className = 'timezone'; zone.textContent = period.timezone.S;
+        const start = document.createElement('td'); start.className = 'time'; start.textContent = beginTime;
+        const end = document.createElement('td'); end.className = 'time'; end.textContent = endTime;
+        const zone = document.createElement('td'); zone.className = 'timezone'; zone.textContent = periodTimezone;
         const action = document.createElement('td'); const button = document.createElement('button'); button.className = 'btn danger'; button.textContent = 'Remove';
-        button.addEventListener('click', function () { removePeriod(period.name.S); }); action.appendChild(button);
+        button.addEventListener('click', function () { removePeriod(periodName); }); action.appendChild(button);
         row.appendChild(name); row.appendChild(daysCell); row.appendChild(start); row.appendChild(end); row.appendChild(zone); row.appendChild(action);
         rows.appendChild(row);
       });
       if (adding) renderForm();
+    }
+
+    function attributeValue(attribute, fallback) {
+      if (attribute === undefined || attribute === null) return fallback;
+      if (typeof attribute !== 'object' || Array.isArray(attribute)) return attribute;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'S')) return attribute.S;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'SS')) return attribute.SS;
+      return fallback;
     }
 
     function renderForm() {
@@ -195,7 +227,7 @@
       const begin = document.getElementById('beginTime').value;
       const end = document.getElementById('endTime').value;
       if (!name || !selectedDays.length || !begin || !end) { toast('Enter a name, times, and at least one weekday.', true); return; }
-      if (periods.some(function (item) { return item.name.S === name; })) { toast('This schedule already contains that period.', true); return; }
+      if (periods.some(function (item) { return attributeValue(item.name, '') === name; })) { toast('This schedule already contains that period.', true); return; }
       const payload = {period_name:name, selected_days:selectedDays, begin_time:begin, end_time:end, timezone:document.getElementById('timezone').value, schedule_name:dropdown.value};
       document.getElementById('savePeriod').disabled = true;
       request('/db/add_period', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
@@ -212,13 +244,39 @@
         .catch(function () { toast('Could not remove the period', true); });
     }
 
-    request('/db')
-      .then(function (data) {
-        (data.schedules_list || []).forEach(function (name) { const option = document.createElement('option'); option.value = name; option.textContent = name; dropdown.appendChild(option); });
+    function populateSchedules(schedules) {
+        dropdown.innerHTML = '<option value="">Choose a schedule…</option>';
+        schedules.forEach(function (name) {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          dropdown.appendChild(option);
+        });
+        dropdown.disabled = schedules.length === 0;
+        if (!schedules.length) {
+          dropdown.innerHTML = '<option value="">No schedules available</option>';
+          throw new Error('No schedules are configured');
+        }
         const requested = new URLSearchParams(window.location.search).get('schedule');
         if (requested && Array.from(dropdown.options).some(function (option) { return option.value === requested; })) { dropdown.value = requested; loadPeriods(); }
+    }
+
+    request('/db')
+      .then(function (data) {
+        const apiSchedules = data && Array.isArray(data.schedules_list) ? data.schedules_list : [];
+        populateSchedules(apiSchedules.length ? apiSchedules : configuredSchedules);
       })
-      .catch(function () { toast('Could not load schedules', true); });
+      .catch(function (error) {
+        console.error('Schedule API loading failed:', error);
+        if (configuredSchedules.length) {
+          populateSchedules(configuredSchedules);
+          toast('Using schedules from the Terraform configuration', false);
+          return;
+        }
+        dropdown.disabled = true;
+        dropdown.innerHTML = '<option value="">Could not load schedules</option>';
+        toast('Could not load schedules', true);
+      });
 
     dropdown.addEventListener('change', loadPeriods);
     addButton.addEventListener('click', function () { if (!dropdown.value || adding) return; adding = true; addButton.disabled = true; render(); });
