@@ -185,6 +185,42 @@ def handler(event, context):
             )
         return json_response(400, {"message": "Period data is required"})
 
+    elif path == '/db/assign_period':
+        assignment = event.get('body')
+        if assignment is not None:
+            assignment = json.loads(assignment)
+            period_name = assignment.get("period_name")
+            schedule_name = assignment.get("schedule_name")
+            if not period_name or not schedule_name:
+                return json_response(
+                    400,
+                    {"message": "A period name and schedule name are required"}
+                )
+
+            period_response = dynamodb.get_item(
+                TableName=table_name,
+                Key={
+                    "type": {"S": "period"},
+                    "name": {"S": period_name}
+                }
+            )
+            if not period_response.get("Item"):
+                return json_response(
+                    404,
+                    {"message": f'Period "{period_name}" was not found'}
+                )
+
+            add_period_to_schedule(period_name, schedule_name)
+            return json_response(
+                200,
+                {
+                    "message": "period assigned",
+                    "period_name": period_name,
+                    "schedule_name": schedule_name
+                }
+            )
+        return json_response(400, {"message": "Assignment data is required"})
+
     elif path == '/db/add_period':
         period=event.get('body')
         print(period)

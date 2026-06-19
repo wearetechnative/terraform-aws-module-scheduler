@@ -88,7 +88,10 @@
     <main>
       <header class="topbar">
         <div><p class="eyebrow">Time windows</p><h1>Periods</h1><p class="subtitle">Set the exact days and hours when a schedule should keep instances running.</p></div>
-        <button class="btn accent" id="addButton" disabled>+ Add period</button>
+        <div class="form-actions">
+          <button class="btn ghost" id="assignButton" disabled>Assign existing</button>
+          <button class="btn accent" id="addButton" disabled>+ Create period</button>
+        </div>
       </header>
       <section class="selector-card">
         <div><label for="scheduleDropdown">View</label><p>Browse every period, including unassigned periods, or filter by schedule.</p></div>
@@ -112,8 +115,10 @@
     const dropdown = document.getElementById('scheduleDropdown');
     const rows = document.getElementById('periodRows');
     const addButton = document.getElementById('addButton');
+    const assignButton = document.getElementById('assignButton');
     let periods = [];
     let adding = false;
+    let assigning = false;
 
     function toast(message, isError) {
       const el = document.getElementById('toast');
@@ -152,7 +157,7 @@
       const showingAll = dropdown.value === '__all__';
       rows.innerHTML = '';
       document.getElementById('periodCount').textContent = periods.length + (periods.length === 1 ? ' period' : ' periods') + (showingAll ? ' total' : ' assigned');
-      if (!periods.length && !adding) {
+      if (!periods.length && !adding && !assigning) {
         rows.innerHTML = '<tr><td colspan="6"><div class="state"><div class="state-icon">◷</div><strong>No periods found</strong>' + (showingAll ? 'Create a period to make it available for future schedules.' : 'This schedule does not have any assigned periods.') + '</div></td></tr>';
         return;
       }
@@ -182,6 +187,7 @@
         rows.appendChild(row);
       });
       if (adding) renderForm();
+      if (assigning) renderAssignmentForm();
     }
 
     function attributeValue(attribute, fallback) {
@@ -206,14 +212,87 @@
         '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="savePeriod">Save</button><button class="btn ghost" id="cancelPeriod">Cancel</button></div></td>';
       rows.appendChild(row);
       document.getElementById('savePeriod').addEventListener('click', savePeriod);
-      document.getElementById('cancelPeriod').addEventListener('click', function () { adding = false; addButton.disabled = false; render(); });
+      document.getElementById('cancelPeriod').addEventListener('click', function () {
+        adding = false;
+        addButton.disabled = false;
+        assignButton.disabled = dropdown.value === '__all__';
+        render();
+      });
       document.getElementById('periodName').focus();
+    }
+
+    function renderAssignmentForm() {
+      const row = document.createElement('tr');
+      row.className = 'form-row';
+      row.innerHTML = '<td colspan="5"><label class="field-label" for="existingPeriod">Existing unassigned period</label><select id="existingPeriod"><option value="">Loading available periods…</option></select></td>' +
+        '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="confirmAssignment" disabled>Assign</button><button class="btn ghost" id="cancelAssignment">Cancel</button></div></td>';
+      rows.appendChild(row);
+
+      const select = document.getElementById('existingPeriod');
+      const confirmButton = document.getElementById('confirmAssignment');
+      document.getElementById('cancelAssignment').addEventListener('click', function () {
+        assigning = false;
+        assignButton.disabled = false;
+        render();
+      });
+      select.addEventListener('change', function () { confirmButton.disabled = !select.value; });
+      confirmButton.addEventListener('click', assignExistingPeriod);
+
+      const assignedNames = periods.map(function (period) { return attributeValue(period.name, ''); });
+      request('/db/periods')
+        .then(function (data) {
+          const available = (data.period_list || []).filter(function (period) {
+            return !assignedNames.includes(attributeValue(period.name, ''));
+          });
+          select.innerHTML = '<option value="">Choose a period…</option>';
+          available.forEach(function (period) {
+            const name = attributeValue(period.name, '');
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+          });
+          if (!available.length) {
+            select.innerHTML = '<option value="">No unassigned periods available</option>';
+            select.disabled = true;
+          }
+        })
+        .catch(function (error) {
+          console.error('Available period loading failed:', error);
+          select.innerHTML = '<option value="">Could not load periods</option>';
+          select.disabled = true;
+          toast('Could not load available periods', true);
+        });
+    }
+
+    function assignExistingPeriod() {
+      const select = document.getElementById('existingPeriod');
+      const button = document.getElementById('confirmAssignment');
+      if (!select.value || !dropdown.value || dropdown.value === '__all__') return;
+      button.disabled = true;
+      request('/db/assign_period', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({period_name:select.value, schedule_name:dropdown.value})
+      })
+        .then(function () {
+          assigning = false;
+          toast('Period assigned to ' + dropdown.value);
+          loadPeriods();
+        })
+        .catch(function (error) {
+          console.error('Period assignment failed:', error);
+          toast('Could not assign the period', true);
+          button.disabled = false;
+        });
     }
 
     function loadPeriods() {
       const schedule = dropdown.value;
       addButton.disabled = !schedule;
+      assignButton.disabled = !schedule || schedule === '__all__';
       adding = false;
+      assigning = false;
       if (!schedule) {
         periods = [];
         document.getElementById('panelTitle').textContent = 'Schedule periods';
@@ -296,7 +375,22 @@
       });
 
     dropdown.addEventListener('change', loadPeriods);
-    addButton.addEventListener('click', function () { if (!dropdown.value || adding) return; adding = true; addButton.disabled = true; render(); });
+    addButton.addEventListener('click', function () {
+      if (!dropdown.value || adding) return;
+      adding = true;
+      assigning = false;
+      addButton.disabled = true;
+      assignButton.disabled = dropdown.value === '__all__';
+      render();
+    });
+    assignButton.addEventListener('click', function () {
+      if (!dropdown.value || dropdown.value === '__all__' || assigning) return;
+      assigning = true;
+      adding = false;
+      assignButton.disabled = true;
+      addButton.disabled = false;
+      render();
+    });
   </script>
 </body>
 </html>
