@@ -29,6 +29,9 @@
     .subtitle { margin:8px 0 0; color:var(--muted); }
     .btn { min-height:42px; padding:0 16px; display:inline-flex; align-items:center; gap:8px; border:0; border-radius:10px; background:var(--dark); color:#fff; font-weight:700; cursor:pointer; }
     .btn.accent { background:var(--accent); color:var(--dark); }
+    .btn.ghost { background:#eef1ec; color:var(--ink); }
+    .btn:disabled { cursor:not-allowed; opacity:.5; }
+    .top-actions { display:flex; gap:9px; }
     .summary { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
     .summary-card { padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; }
     .summary-card span { color:var(--muted); font-size:12px; font-weight:650; }
@@ -55,6 +58,24 @@
     .state { padding:60px 20px; text-align:center; color:var(--muted); }
     .state strong { display:block; color:var(--ink); margin-bottom:5px; }
     .skeleton td div { height:30px; border-radius:8px; background:linear-gradient(90deg,#f1f3f0 25%,#fafbfa 37%,#f1f3f0 63%); background-size:400% 100%; animation:shimmer 1.4s infinite; }
+    dialog { width:min(480px,calc(100% - 32px)); padding:0; border:0; border-radius:18px; color:var(--ink); box-shadow:0 24px 80px rgba(23,32,28,.25); }
+    dialog::backdrop { background:rgba(16,24,20,.55); backdrop-filter:blur(3px); }
+    .dialog-head { padding:22px 24px 17px; border-bottom:1px solid var(--line); }
+    .dialog-head h2 { margin:0 0 5px; font-size:20px; letter-spacing:-.03em; }
+    .dialog-head p { margin:0; color:var(--muted); font-size:13px; }
+    .dialog-body { display:grid; gap:17px; padding:22px 24px; }
+    .field label { display:block; margin-bottom:6px; font-size:12px; font-weight:750; }
+    .field input,.field select { width:100%; height:43px; padding:0 12px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); font:inherit; outline:none; }
+    .field select[multiple] { height:150px; padding:7px; }
+    .field select[multiple] option { padding:8px 9px; border-radius:6px; }
+    .field select[multiple] option:checked { background:var(--dark) linear-gradient(0deg,var(--dark),var(--dark)); color:#fff; }
+    .field input:focus,.field select:focus { border-color:#9aa68f; box-shadow:0 0 0 3px #edf2e4; }
+    .field small { display:block; margin-top:6px; color:var(--muted); }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:9px; padding:17px 24px; border-top:1px solid var(--line); background:#fafbf9; }
+    .form-error { display:none; padding:10px 12px; border-radius:8px; color:#8f3030; background:#fff0f0; font-size:12px; font-weight:650; }
+    .form-error.show { display:block; }
+    .toast { position:fixed; right:24px; bottom:24px; padding:13px 16px; border-radius:11px; background:var(--dark); color:#fff; box-shadow:0 15px 40px rgba(0,0,0,.18); transform:translateY(20px); opacity:0; pointer-events:none; transition:.2s ease; font-size:13px; font-weight:650; }
+    .toast.show { transform:translateY(0); opacity:1; }
     @keyframes shimmer { from { background-position:100% 0; } to { background-position:0 0; } }
     @media (max-width:900px) { .shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:18px 20px}.brand{padding-bottom:15px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}main{padding:28px 20px 50px}.summary{grid-template-columns:1fr 1fr}.table-wrap{overflow-x:auto}table{min-width:720px} }
     @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.search{width:100%} }
@@ -70,17 +91,17 @@
         <a class="active" href="schedules.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> Schedules</a>
         <a href="periods.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Periods</a>
       </nav>
-      <div class="sidebar-foot"><strong>Configuration source</strong>Schedule names are provisioned by Terraform and stored in DynamoDB.</div>
+      <div class="sidebar-foot"><strong>Configuration source</strong>Schedules and periods are stored in DynamoDB.</div>
     </aside>
     <main>
       <header class="topbar">
         <div><p class="eyebrow">Automation</p><h1>Schedules</h1><p class="subtitle">Review your instance operating windows and their assigned periods.</p></div>
-        <a class="btn accent" href="periods.html">Manage periods →</a>
+        <div class="top-actions"><a class="btn ghost" href="periods.html">Manage periods</a><button class="btn accent" id="createScheduleButton">+ New schedule</button></div>
       </header>
       <section class="summary">
         <div class="summary-card"><span>Total schedules</span><strong id="totalCount">—</strong></div>
         <div class="summary-card"><span>Active schedules</span><strong id="activeCount">—</strong></div>
-        <div class="summary-card"><span>Configuration</span><strong>Terraform</strong></div>
+        <div class="summary-card"><span>Configuration</span><strong>DynamoDB</strong></div>
       </section>
       <section class="panel">
         <div class="toolbar">
@@ -99,10 +120,40 @@
       </section>
     </main>
   </div>
+  <dialog id="scheduleDialog">
+    <form id="scheduleForm">
+      <div class="dialog-head"><h2>Create schedule</h2><p>Create a named schedule with its first operating period.</p></div>
+      <div class="dialog-body">
+        <div class="form-error" id="scheduleError"></div>
+        <div class="field"><label for="scheduleName">Schedule name</label><input id="scheduleName" required placeholder="production-office-hours" autocomplete="off"><small>This value is used by the InstanceScheduler EC2 tag.</small></div>
+        <div class="field"><label for="initialPeriod">Initial periods</label><select id="initialPeriod" multiple required><option value="">Loading periods…</option></select><small>Select one or more periods. Use Ctrl/Cmd or Shift to select multiple.</small></div>
+      </div>
+      <div class="dialog-actions"><button class="btn ghost" type="button" id="cancelSchedule">Cancel</button><button class="btn accent" type="submit" id="saveSchedule">Create schedule</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
   <script>
     const apiUrl = '${api_url}';
     const body = document.getElementById('scheduleRows');
     let schedules = [];
+
+    function request(path, options) {
+      return fetch(apiUrl + path, options).then(function (response) {
+        return response.text().then(function (text) {
+          let data = {};
+          try { data = text ? JSON.parse(text) : {}; } catch (error) { data = {message:text}; }
+          if (!response.ok) throw new Error(data.message || 'Request failed');
+          return data;
+        });
+      });
+    }
+
+    function toast(message) {
+      const element = document.getElementById('toast');
+      element.textContent = message;
+      element.className = 'toast show';
+      window.setTimeout(function () { element.className = 'toast'; }, 2800);
+    }
 
     function getPeriods(name) {
       return fetch(apiUrl + '/db/list_periods', {
@@ -185,6 +236,69 @@
       });
 
     document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
+
+    const dialog = document.getElementById('scheduleDialog');
+    const initialPeriod = document.getElementById('initialPeriod');
+    document.getElementById('createScheduleButton').addEventListener('click', function () {
+      const error = document.getElementById('scheduleError');
+      error.className = 'form-error';
+      document.getElementById('scheduleName').value = '';
+      initialPeriod.innerHTML = '<option value="">Loading periods…</option>';
+      initialPeriod.disabled = true;
+      dialog.showModal();
+      request('/db/periods')
+        .then(function (data) {
+          const available = data.period_list || [];
+          initialPeriod.innerHTML = '<option value="">Choose a period…</option>';
+          available.forEach(function (period) {
+            const name = period.name && period.name.S ? period.name.S : period.name;
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            initialPeriod.appendChild(option);
+          });
+          initialPeriod.disabled = available.length === 0;
+          if (!available.length) {
+            initialPeriod.innerHTML = '<option value="">Create a period first</option>';
+            error.textContent = 'No periods exist yet. Create a period before creating a schedule.';
+            error.className = 'form-error show';
+          }
+        })
+        .catch(function (error) {
+          initialPeriod.innerHTML = '<option value="">Could not load periods</option>';
+          error.textContent = error.message;
+          error.className = 'form-error show';
+        });
+    });
+    document.getElementById('cancelSchedule').addEventListener('click', function () { dialog.close(); });
+    document.getElementById('scheduleForm').addEventListener('submit', function (event) {
+      event.preventDefault();
+      const name = document.getElementById('scheduleName').value.trim();
+      const periods = Array.from(initialPeriod.selectedOptions).map(function (option) { return option.value; }).filter(Boolean);
+      const error = document.getElementById('scheduleError');
+      if (!name || !periods.length) {
+        error.textContent = 'Select at least one period.';
+        error.className = 'form-error show';
+        return;
+      }
+      const save = document.getElementById('saveSchedule');
+      save.disabled = true;
+      request('/db/create_schedule', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({schedule_name:name, period_names:periods})
+      })
+        .then(function () {
+          dialog.close();
+          toast('Schedule created');
+          window.location.href = 'periods.html?schedule=' + encodeURIComponent(name);
+        })
+        .catch(function (requestError) {
+          error.textContent = requestError.message;
+          error.className = 'form-error show';
+          save.disabled = false;
+        });
+    });
   </script>
 </body>
 </html>

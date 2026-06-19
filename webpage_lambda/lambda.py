@@ -2,6 +2,7 @@ def handler(event, context):
     import boto3
     import os
     import json
+    from botocore.exceptions import ClientError
     table_name=os.environ["TABLENAME"]
     path = event.get('rawPath')
     db = boto3.resource('dynamodb')
@@ -107,7 +108,84 @@ def handler(event, context):
             
         return json_response(200, {'schedules_list': schedule})
 
-    if path == '/db/periods':
+    if path == '/db/create_schedule':
+        schedule = event.get('body')
+        if schedule is None:
+            return json_response(400, {"message": "Schedule data is required"})
+
+        schedule = json.loads(schedule)
+        schedule_name = schedule.get("schedule_name", "").strip()
+        period_names = schedule.get("period_names", [])
+        if isinstance(period_names, str):
+            period_names = [period_names]
+        period_names = list(dict.fromkeys(
+            name.strip() for name in period_names if isinstance(name, str) and name.strip()
+        ))
+        if not schedule_name or not period_names:
+            return json_response(
+                400,
+                {"message": "A schedule name and at least one period are required"}
+            )
+
+        period_response = dynamodb.batch_get_item(
+            RequestItems={
+                table_name: {
+                    "Keys": [
+                        {
+                            "type": {"S": "period"},
+                            "name": {"S": period_name}
+                        }
+                        for period_name in period_names
+                    ],
+                    "ProjectionExpression": "#name",
+                    "ExpressionAttributeNames": {"#name": "name"}
+                }
+            }
+        )
+        existing_periods = {
+            item["name"]["S"]
+            for item in period_response.get("Responses", {}).get(table_name, [])
+        }
+        missing_periods = [
+            period_name
+            for period_name in period_names
+            if period_name not in existing_periods
+        ]
+        if missing_periods:
+            return json_response(
+                404,
+                {"message": f'Periods not found: {", ".join(missing_periods)}'}
+            )
+
+        try:
+            dynamodb.put_item(
+                TableName=table_name,
+                Item={
+                    "type": {"S": "schedule"},
+                    "name": {"S": schedule_name},
+                    "periods": {"SS": period_names}
+                },
+                ConditionExpression="attribute_not_exists(#name)",
+                ExpressionAttributeNames={"#name": "name"}
+            )
+        except ClientError as error:
+            if error.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                return json_response(
+                    409,
+                    {"message": f'Schedule "{schedule_name}" already exists'}
+                )
+            raise
+
+        return json_response(
+            201,
+            {
+                "message": "schedule created",
+                "schedule_name": schedule_name,
+                "period_names": period_names
+            }
+        )
+
+    elif path == '/db/periods':
         response = dynamodb.query(
             TableName=table_name,
             KeyConditionExpression="#type = :period_type",

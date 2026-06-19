@@ -110,3 +110,11 @@ resource "aws_lambda_permission" "allow_API_assign_period" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/assign_period"
 }
+
+resource "aws_lambda_permission" "allow_API_create_schedule" {
+  statement_id  = "AllowExecutionFromApigatewayCreateSchedule"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/create_schedule"
+}
