@@ -8,6 +8,8 @@ locals {
     "ANY /db/delete_period_definition",
     "ANY /db/assign_period",
     "ANY /db/add_period",
-    "ANY /db/delete_period"
+    "ANY /db/delete_period",
+    "ANY /instances",
+    "ANY /instances/schedule"
   ]
 }

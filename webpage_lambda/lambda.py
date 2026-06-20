@@ -111,6 +111,98 @@ def handler(event, context):
                 assignments.setdefault(period_name, []).append(schedule_name)
         return assignments
 
+    if path == '/instances':
+        ec2 = boto3.client('ec2')
+        paginator = ec2.get_paginator('describe_instances')
+        instances = []
+        for page in paginator.paginate(
+            Filters=[
+                {
+                    "Name": "instance-state-name",
+                    "Values": ["pending", "running", "stopping", "stopped"]
+                }
+            ]
+        ):
+            for reservation in page.get("Reservations", []):
+                for instance in reservation.get("Instances", []):
+                    tags = {
+                        tag["Key"]: tag.get("Value", "")
+                        for tag in instance.get("Tags", [])
+                    }
+                    instances.append({
+                        "instance_id": instance["InstanceId"],
+                        "name": tags.get("Name", ""),
+                        "state": instance.get("State", {}).get("Name", "unknown"),
+                        "instance_type": instance.get("InstanceType", ""),
+                        "availability_zone": instance.get(
+                            "Placement", {}
+                        ).get("AvailabilityZone", ""),
+                        "private_ip": instance.get("PrivateIpAddress", ""),
+                        "schedule": tags.get("InstanceScheduler", "")
+                    })
+        instances.sort(key=lambda item: (
+            item["name"].lower(),
+            item["instance_id"]
+        ))
+        return json_response(200, {"instances": instances})
+
+    if path == '/instances/schedule':
+        request_body = event.get('body')
+        if request_body is None:
+            return json_response(400, {"message": "Instance data is required"})
+
+        request_body = json.loads(request_body)
+        instance_id = request_body.get("instance_id", "").strip()
+        schedule_name = request_body.get("schedule_name", "").strip()
+        if not instance_id:
+            return json_response(400, {"message": "An instance ID is required"})
+
+        ec2 = boto3.client('ec2')
+        try:
+            ec2.describe_instances(InstanceIds=[instance_id])
+        except ClientError as error:
+            if error.response["Error"]["Code"] in {
+                "InvalidInstanceID.NotFound",
+                "InvalidInstanceID.Malformed"
+            }:
+                return json_response(404, {"message": "Instance was not found"})
+            raise
+
+        if schedule_name:
+            schedule_response = dynamodb.get_item(
+                TableName=table_name,
+                Key={
+                    "type": {"S": "schedule"},
+                    "name": {"S": schedule_name}
+                }
+            )
+            if not schedule_response.get("Item"):
+                return json_response(
+                    404,
+                    {"message": f'Schedule "{schedule_name}" was not found'}
+                )
+            ec2.create_tags(
+                Resources=[instance_id],
+                Tags=[{"Key": "InstanceScheduler", "Value": schedule_name}]
+            )
+            return json_response(
+                200,
+                {
+                    "message": "schedule assigned",
+                    "instance_id": instance_id,
+                    "schedule_name": schedule_name
+                }
+            )
+
+        ec2.delete_tags(
+            Resources=[instance_id],
+            Tags=[{"Key": "InstanceScheduler"}]
+        )
+        return json_response(
+            200,
+            {"message": "schedule removed", "instance_id": instance_id}
+        )
+
     
     if path == '/db':
         response = table.query(
