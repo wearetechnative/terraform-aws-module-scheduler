@@ -7,6 +7,19 @@ def handler(event, context):
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
     table_name=os.environ["TABLENAME"]
     path = event.get('rawPath')
+    method = event.get("requestContext", {}).get("http", {}).get("method")
+
+    if method == "OPTIONS":
+        return {
+            "statusCode": 204,
+            "headers": {
+                "access-control-allow-origin": "*",
+                "access-control-allow-methods": "GET,POST,OPTIONS",
+                "access-control-allow-headers": "authorization,content-type"
+            },
+            "body": ""
+        }
+
     db = boto3.resource('dynamodb')
     dynamodb = boto3.client('dynamodb')
     table = db.Table(table_name)

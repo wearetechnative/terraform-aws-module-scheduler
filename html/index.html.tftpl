@@ -204,9 +204,10 @@
           list.appendChild(row);
         });
       })
-      .catch(function () {
+      .catch(function (error) {
+        console.error('Scheduler API request failed:', error);
         document.getElementById('scheduleCount').textContent = '—';
-        list.innerHTML = '<div class="empty">Could not reach the scheduler API.</div>';
+        list.innerHTML = '<div class="empty">Could not reach the scheduler API. Check the browser console for the HTTP or CORS error.</div>';
       });
   </script>
 </body>

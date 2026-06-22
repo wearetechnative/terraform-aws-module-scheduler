@@ -14,4 +14,9 @@ locals {
     "ANY /instances/schedule",
     "ANY /instances/ignore"
   ]
+
+  webpage_api_paths = toset([
+    for route in local.webpage_api_routes :
+    trimprefix(route, "ANY ")
+  ])
 }

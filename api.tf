@@ -29,6 +29,13 @@ resource "aws_apigatewayv2_route" "my_route" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
+resource "aws_apigatewayv2_route" "cors_preflight" {
+  for_each  = local.webpage_api_paths
+  api_id    = aws_apigatewayv2_api.my_api.id
+  route_key = "OPTIONS ${each.value}"
+  target    = "integrations/${aws_apigatewayv2_integration.int.id}"
+}
+
 moved {
   from = aws_apigatewayv2_route.my_route[0]
   to   = aws_apigatewayv2_route.my_route["ANY /db"]

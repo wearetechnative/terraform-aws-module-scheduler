@@ -127,6 +127,18 @@ resource "aws_cloudfront_distribution" "webpage" {
     origin_access_control_id = aws_cloudfront_origin_access_control.webpage.id
   }
 
+  origin {
+    domain_name = replace(aws_apigatewayv2_api.my_api.api_endpoint, "https://", "")
+    origin_id   = "scheduler-api-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   default_cache_behavior {
     target_origin_id       = "scheduler-s3-origin"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
@@ -145,6 +157,30 @@ resource "aws_cloudfront_distribution" "webpage" {
         forward = "none"
       }
     }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/db*"
+    target_origin_id       = "scheduler-api-origin"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
+    viewer_protocol_policy = "https-only"
+    compress               = true
+
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.api.id
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/instances*"
+    target_origin_id       = "scheduler-api-origin"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
+    viewer_protocol_policy = "https-only"
+    compress               = true
+
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.api.id
   }
 
   custom_error_response {
@@ -169,6 +205,37 @@ resource "aws_cloudfront_distribution" "webpage" {
     acm_certificate_arn      = aws_acm_certificate_validation.scheduler.certificate_arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
+  }
+}
+
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  name = "Managed-CachingDisabled"
+}
+
+resource "aws_cloudfront_origin_request_policy" "api" {
+  name    = "${var.bucket_name}-api-request"
+  comment = "Forward authenticated scheduler API requests"
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+
+  headers_config {
+    header_behavior = "whitelist"
+
+    headers {
+      items = [
+        "Authorization",
+        "Content-Type",
+        "Origin",
+        "Access-Control-Request-Headers",
+        "Access-Control-Request-Method"
+      ]
+    }
+  }
+
+  query_strings_config {
+    query_string_behavior = "all"
   }
 }
 

@@ -54,7 +54,7 @@ resource "aws_s3_bucket_policy" "webpage_bucket" {
 resource "aws_s3_bucket_object" "object" {
   bucket       = aws_s3_bucket.webpage_bucket.id
   key          = "index.html"
-  content      = templatefile("${path.module}/html/index.html.tftpl", { api_url = aws_apigatewayv2_api.my_api.api_endpoint })
+  content      = templatefile("${path.module}/html/index.html.tftpl", { api_url = local.application_url })
   content_type = "text/html"
   etag         = filemd5("${path.module}/html/index.html.tftpl")
 
@@ -64,7 +64,7 @@ resource "aws_s3_bucket_object" "object2" {
   bucket = aws_s3_bucket.webpage_bucket.id
   key    = "periods.html"
   content = templatefile("${path.module}/html/periods.html.tftpl", {
-    api_url        = aws_apigatewayv2_api.my_api.api_endpoint
+    api_url        = local.application_url
     schedule_names = jsonencode([for schedule in var.schedules : schedule.name])
   })
   content_type = "text/html"
@@ -74,7 +74,7 @@ resource "aws_s3_bucket_object" "object2" {
 resource "aws_s3_bucket_object" "object3" {
   bucket       = aws_s3_bucket.webpage_bucket.id
   key          = "schedules.html"
-  content      = templatefile("${path.module}/html/schedules.html.tftpl", { api_url = aws_apigatewayv2_api.my_api.api_endpoint })
+  content      = templatefile("${path.module}/html/schedules.html.tftpl", { api_url = local.application_url })
   content_type = "text/html"
   etag         = filemd5("${path.module}/html/schedules.html.tftpl")
 
@@ -83,7 +83,7 @@ resource "aws_s3_bucket_object" "object3" {
 resource "aws_s3_bucket_object" "instances" {
   bucket       = aws_s3_bucket.webpage_bucket.id
   key          = "instances.html"
-  content      = templatefile("${path.module}/html/instances.html.tftpl", { api_url = aws_apigatewayv2_api.my_api.api_endpoint })
+  content      = templatefile("${path.module}/html/instances.html.tftpl", { api_url = local.application_url })
   content_type = "text/html"
   etag         = filemd5("${path.module}/html/instances.html.tftpl")
 }
@@ -100,7 +100,7 @@ resource "aws_s3_bucket_object" "auth" {
   bucket = aws_s3_bucket.webpage_bucket.id
   key    = "auth.js"
   content = templatefile("${path.module}/html/auth.js.tftpl", {
-    api_url         = aws_apigatewayv2_api.my_api.api_endpoint
+    api_url         = local.application_url
     application_url = local.application_url
     callback_url    = local.callback_url
     client_id       = aws_cognito_user_pool_client.scheduler.id
