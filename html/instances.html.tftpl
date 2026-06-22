@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#17201c">
+  <meta name="theme-color" content="#112f41">
   <title>Instances · Instance Scheduler</title>
   <style>
-    :root { --ink:#17201c; --muted:#69736d; --line:#e2e6e3; --paper:#f5f6f2; --accent:#d8ff5f; --dark:#17201c; --danger:#a93838; }
+    :root { --ink:#112f41; --muted:#607582; --line:#dce7eb; --paper:#f3f7f8; --accent:#72c8d3; --dark:#112f41; --danger:#a93838; }
     * { box-sizing:border-box; }
     body { margin:0; color:var(--ink); background:var(--paper); font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     a { color:inherit; text-decoration:none; }
     button,input,select { font:inherit; }
     .shell { min-height:100vh; display:grid; grid-template-columns:248px 1fr; }
     .sidebar { position:sticky; top:0; height:100vh; padding:28px 20px; background:var(--dark); color:#fff; display:flex; flex-direction:column; }
-    .brand { display:flex; align-items:center; gap:11px; font-weight:750; letter-spacing:-.02em; padding:0 8px 34px; }
-    .brand-mark { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:var(--accent); color:var(--dark); }
+    .brand { display:block; margin-bottom:28px; padding:10px 12px; border-radius:12px; background:#fff; }
+    .brand-logo { display:block; width:100%; height:auto; }
     .nav-label { margin:0 10px 9px; color:#89938e; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.11em; }
     .nav { display:grid; gap:6px; }
     .nav a { display:flex; gap:12px; align-items:center; padding:11px 12px; border-radius:10px; color:#aeb8b2; font-weight:600; }
-    .nav a:hover,.nav a.active { color:#fff; background:#26312c; }
+    .nav a:hover,.nav a.active { color:#fff; background:#1b4359; }
     .nav a.active::before { content:""; width:4px; height:18px; border-radius:9px; background:var(--accent); margin-left:-12px; }
     .nav svg { width:18px; height:18px; }
     .sidebar-foot { margin-top:auto; padding:16px; border:1px solid #35413b; border-radius:14px; color:#9da8a2; font-size:12px; }
@@ -83,7 +83,7 @@
 <body>
   <div class="shell">
     <aside class="sidebar">
-      <a class="brand" href="index.html"><span class="brand-mark"><svg viewBox="0 0 24 24" width="19" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v9l5 3"/><circle cx="12" cy="12" r="9"/></svg></span>Instance Scheduler</a>
+      <a class="brand" href="index.html"><img class="brand-logo" src="technativelogo.svg" alt="TechNative"></a>
       <p class="nav-label">Workspace</p>
       <nav class="nav">
         <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg> Overview</a>

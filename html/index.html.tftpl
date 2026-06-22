@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#112f41">
   <title>Instance Scheduler</title>
   <style>
     :root {
-      --ink: #17201c;
-      --muted: #69736d;
-      --line: #e2e6e3;
-      --paper: #f5f6f2;
+      --ink: #112f41;
+      --muted: #607582;
+      --line: #dce7eb;
+      --paper: #f3f7f8;
       --card: #ffffff;
-      --accent: #d8ff5f;
-      --accent-dark: #9fc52a;
-      --dark: #17201c;
-      --shadow: 0 18px 50px rgba(23, 32, 28, .08);
+      --accent: #72c8d3;
+      --accent-dark: #3995a4;
+      --dark: #112f41;
+      --shadow: 0 18px 50px rgba(17, 47, 65, .09);
     }
     * { box-sizing: border-box; }
     body {
@@ -31,15 +31,15 @@
       position: sticky; top: 0; height: 100vh; padding: 28px 20px;
       background: var(--dark); color: #fff; display: flex; flex-direction: column;
     }
-    .brand { display: flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: -.02em; padding: 0 8px 34px; }
-    .brand-mark { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent); color: var(--dark); }
+    .brand { display: block; margin-bottom: 28px; padding: 10px 12px; border-radius: 12px; background: #fff; }
+    .brand-logo { display: block; width: 100%; height: auto; }
     .nav-label { margin: 0 10px 9px; color: #89938e; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .11em; }
     .nav { display: grid; gap: 6px; }
     .nav a { display: flex; gap: 12px; align-items: center; padding: 11px 12px; border-radius: 10px; color: #aeb8b2; font-weight: 600; }
-    .nav a:hover, .nav a.active { color: #fff; background: #26312c; }
+    .nav a:hover, .nav a.active { color: #fff; background: #1b4359; }
     .nav a.active::before { content: ""; width: 4px; height: 18px; border-radius: 9px; background: var(--accent); margin-left: -12px; }
     .nav svg { width: 18px; height: 18px; }
-    .sidebar-foot { margin-top: auto; padding: 16px; border: 1px solid #35413b; border-radius: 14px; color: #9da8a2; font-size: 12px; }
+    .sidebar-foot { margin-top: auto; padding: 16px; border: 1px solid #31566a; border-radius: 14px; color: #a9bbc5; font-size: 12px; }
     .sidebar-foot strong { display: block; color: #fff; font-size: 13px; margin-bottom: 4px; }
     main { padding: 36px 44px 60px; min-width: 0; }
     .topbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 34px; }
@@ -51,15 +51,15 @@
       position: relative; overflow: hidden; padding: 36px; border-radius: 24px;
       color: #fff; background: var(--dark); box-shadow: var(--shadow);
     }
-    .hero::after { content: ""; position: absolute; width: 310px; height: 310px; right: -100px; top: -140px; border: 55px solid rgba(216,255,95,.12); border-radius: 50%; }
+    .hero::after { content: ""; position: absolute; width: 310px; height: 310px; right: -100px; top: -140px; border: 55px solid rgba(114,200,211,.14); border-radius: 50%; }
     .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.5fr .8fr; gap: 40px; align-items: end; }
     .hero h2 { max-width: 650px; margin: 0 0 14px; font-size: clamp(27px, 3.2vw, 48px); line-height: 1.05; letter-spacing: -.05em; }
     .hero h2 em { color: var(--accent); font-style: normal; }
-    .hero p { max-width: 570px; margin: 0; color: #adb8b2; font-size: 16px; }
+    .hero p { max-width: 570px; margin: 0; color: #b8cad3; font-size: 16px; }
     .hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 43px; padding: 0 17px; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; }
     .btn-primary { background: var(--accent); color: var(--dark); }
-    .btn-secondary { background: #2b3631; color: #fff; }
+    .btn-secondary { background: #21485d; color: #fff; }
     .btn svg { width: 16px; }
     .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 22px 0; }
     .metric { padding: 22px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
@@ -109,12 +109,7 @@
 <body>
   <div class="shell">
     <aside class="sidebar">
-      <a class="brand" href="index.html">
-        <span class="brand-mark">
-          <svg viewBox="0 0 24 24" width="19" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v9l5 3"/><circle cx="12" cy="12" r="9"/></svg>
-        </span>
-        Instance Scheduler
-      </a>
+      <a class="brand" href="index.html"><img class="brand-logo" src="technativelogo.svg" alt="TechNative"></a>
       <p class="nav-label">Workspace</p>
       <nav class="nav">
         <a class="active" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg> Overview</a>
@@ -165,11 +160,12 @@
           </div>
         </article>
         <article class="panel">
-          <div class="panel-head"><h3>How it works</h3></div>
+          <div class="panel-head"><h3>How instance scheduling works</h3></div>
           <div class="steps">
-            <div class="step"><span class="step-num">1</span><div><strong>Choose a schedule</strong><p>Select the rule that matches your operating window.</p></div></div>
-            <div class="step"><span class="step-num">2</span><div><strong>Define its periods</strong><p>Set weekdays, start and stop times, and timezone.</p></div></div>
-            <div class="step"><span class="step-num">3</span><div><strong>Tag your instances</strong><p>Use the schedule name as the InstanceScheduler tag value.</p></div></div>
+            <div class="step"><span class="step-num">1</span><div><strong>Create reusable periods</strong><p>Define the weekdays, start and stop times, and timezone for each operating window.</p></div></div>
+            <div class="step"><span class="step-num">2</span><div><strong>Build a schedule</strong><p>Combine one or more periods into a named schedule, such as office hours or weekend coverage.</p></div></div>
+            <div class="step"><span class="step-num">3</span><div><strong>Assign it to EC2</strong><p>Choose a schedule on the Instances page. The app manages the InstanceScheduler tag for you.</p></div></div>
+            <div class="step"><span class="step-num">4</span><div><strong>Temporarily ignore stopping</strong><p>Set Ignore_scheduler with an end time and timezone to keep an instance running. Its regular schedule remains assigned and resumes after the override expires.</p></div></div>
           </div>
         </article>
       </section>

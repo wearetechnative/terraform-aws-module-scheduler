@@ -82,6 +82,14 @@ resource "aws_s3_bucket_object" "instances" {
   etag         = filemd5("${path.module}/html/instances.html.tftpl")
 }
 
+resource "aws_s3_bucket_object" "technative_logo" {
+  bucket       = aws_s3_bucket.webpage_bucket.id
+  key          = "technativelogo.svg"
+  source       = "${path.module}/technativelogo.svg"
+  content_type = "image/svg+xml"
+  etag         = filemd5("${path.module}/technativelogo.svg")
+}
+
 resource "aws_s3_bucket_website_configuration" "website_conf" {
   bucket = aws_s3_bucket.webpage_bucket.id
 
