@@ -1,107 +1,304 @@
-
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>API Gateway Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#112f41">
+  <title>Schedules · Instance Scheduler</title>
   <style>
-    /* Table styles */
-    table {
-      width: 100%;
-      border-collapse: collapse; /* Makes sure borders between cells are combined */
-    }
-    th, td {
-      border: 1px solid black; /* Adds borders to each cell */
-      padding: 8px;  /* Adds space inside each cell */
-      text-align: left; /* Aligns text to the left */
-    }
-    th {
-      background-color: #f2f2f2; /* Light gray background for header cells */
-    }
+    :root { --ink:#112f41; --muted:#607582; --line:#dce7eb; --paper:#f3f7f8; --card:#fff; --accent:#72c8d3; --dark:#112f41; --danger:#b83d3d; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:inherit; text-decoration:none; }
+    .shell { min-height:100vh; display:grid; grid-template-columns:248px 1fr; }
+    .sidebar { position:sticky; top:0; height:100vh; padding:28px 20px; background:var(--dark); color:#fff; display:flex; flex-direction:column; }
+    .brand { display:block; margin-bottom:28px; padding:10px 12px; border-radius:12px; background:#fff; }
+    .brand-logo { display:block; width:100%; height:auto; }
+    .nav-label { margin:0 10px 9px; color:#89938e; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.11em; }
+    .nav { display:grid; gap:6px; }
+    .nav a { display:flex; gap:12px; align-items:center; padding:11px 12px; border-radius:10px; color:#aeb8b2; font-weight:600; }
+    .nav a:hover,.nav a.active { color:#fff; background:#1b4359; }
+    .nav a.active::before { content:""; width:4px; height:18px; border-radius:9px; background:var(--accent); margin-left:-12px; }
+    .nav svg { width:18px; height:18px; }
+    .sidebar-foot { margin-top:auto; padding:16px; border:1px solid #35413b; border-radius:14px; color:#9da8a2; font-size:12px; }
+    .sidebar-foot strong { display:block; color:#fff; font-size:13px; margin-bottom:4px; }
+    main { padding:36px 44px 60px; min-width:0; }
+    .topbar { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:30px; }
+    .eyebrow { margin:0 0 5px; color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
+    h1 { margin:0; font-size:clamp(30px,3vw,42px); line-height:1.08; letter-spacing:-.045em; }
+    .subtitle { margin:8px 0 0; color:var(--muted); }
+    .btn { min-height:42px; padding:0 16px; display:inline-flex; align-items:center; gap:8px; border:0; border-radius:10px; background:var(--dark); color:#fff; font-weight:700; cursor:pointer; }
+    .btn.accent { background:var(--accent); color:var(--dark); }
+    .btn.ghost { background:#eef1ec; color:var(--ink); }
+    .btn:disabled { cursor:not-allowed; opacity:.5; }
+    .top-actions { display:flex; gap:9px; }
+    .summary { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:20px; }
+    .summary-card { padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; }
+    .summary-card span { color:var(--muted); font-size:12px; font-weight:650; }
+    .summary-card strong { display:block; margin-top:4px; font-size:23px; letter-spacing:-.03em; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+    .toolbar { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:17px 20px; border-bottom:1px solid var(--line); }
+    .search { width:min(330px,100%); position:relative; }
+    .search svg { position:absolute; left:12px; top:12px; width:17px; color:var(--muted); }
+    .search input { width:100%; height:41px; padding:0 12px 0 38px; border:1px solid var(--line); border-radius:9px; background:#fafbf9; font:inherit; outline:none; }
+    .search input:focus { border-color:#a8b19f; box-shadow:0 0 0 3px #eff3e8; }
+    .count { color:var(--muted); font-size:12px; font-weight:650; }
+    table { width:100%; border-collapse:collapse; }
+    th { padding:13px 20px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    td { padding:17px 20px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    tbody tr:last-child td { border-bottom:0; }
+    tbody tr:hover { background:#fcfdfb; }
+    .name { display:flex; align-items:center; gap:12px; font-weight:730; }
+    .name-icon { width:35px; height:35px; border-radius:10px; display:grid; place-items:center; background:#eff3ea; }
+    .period-tags { display:flex; flex-wrap:wrap; gap:6px; }
+    .tag { padding:5px 9px; border-radius:7px; color:#465149; background:#f0f2ef; font-size:11px; font-weight:650; }
+    .status { display:inline-flex; align-items:center; gap:7px; padding:5px 9px; border-radius:999px; color:#25704b; background:#eaf7ef; font-size:11px; font-weight:750; }
+    .status::before { content:""; width:6px; height:6px; border-radius:50%; background:#4ba979; }
+    .action { color:#59645e; font-weight:700; font-size:12px; }
+    .state { padding:60px 20px; text-align:center; color:var(--muted); }
+    .state strong { display:block; color:var(--ink); margin-bottom:5px; }
+    .skeleton td div { height:30px; border-radius:8px; background:linear-gradient(90deg,#f1f3f0 25%,#fafbfa 37%,#f1f3f0 63%); background-size:400% 100%; animation:shimmer 1.4s infinite; }
+    dialog { width:min(480px,calc(100% - 32px)); padding:0; border:0; border-radius:18px; color:var(--ink); box-shadow:0 24px 80px rgba(23,32,28,.25); }
+    dialog::backdrop { background:rgba(16,24,20,.55); backdrop-filter:blur(3px); }
+    .dialog-head { padding:22px 24px 17px; border-bottom:1px solid var(--line); }
+    .dialog-head h2 { margin:0 0 5px; font-size:20px; letter-spacing:-.03em; }
+    .dialog-head p { margin:0; color:var(--muted); font-size:13px; }
+    .dialog-body { display:grid; gap:17px; padding:22px 24px; }
+    .field label { display:block; margin-bottom:6px; font-size:12px; font-weight:750; }
+    .field input,.field select { width:100%; height:43px; padding:0 12px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); font:inherit; outline:none; }
+    .field select[multiple] { height:150px; padding:7px; }
+    .field select[multiple] option { padding:8px 9px; border-radius:6px; }
+    .field select[multiple] option:checked { background:var(--dark) linear-gradient(0deg,var(--dark),var(--dark)); color:#fff; }
+    .field input:focus,.field select:focus { border-color:#9aa68f; box-shadow:0 0 0 3px #edf2e4; }
+    .field small { display:block; margin-top:6px; color:var(--muted); }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:9px; padding:17px 24px; border-top:1px solid var(--line); background:#fafbf9; }
+    .form-error { display:none; padding:10px 12px; border-radius:8px; color:#8f3030; background:#fff0f0; font-size:12px; font-weight:650; }
+    .form-error.show { display:block; }
+    .toast { position:fixed; right:24px; bottom:24px; padding:13px 16px; border-radius:11px; background:var(--dark); color:#fff; box-shadow:0 15px 40px rgba(0,0,0,.18); transform:translateY(20px); opacity:0; pointer-events:none; transition:.2s ease; font-size:13px; font-weight:650; }
+    .toast.show { transform:translateY(0); opacity:1; }
+    @keyframes shimmer { from { background-position:100% 0; } to { background-position:0 0; } }
+    @media (max-width:900px) { .shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:18px 20px}.brand{padding-bottom:15px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}main{padding:28px 20px 50px}.summary{grid-template-columns:1fr 1fr}.table-wrap{overflow-x:auto}table{min-width:720px} }
+    @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.search{width:100%} }
   </style>
 </head>
-
 <body>
-  <h1 style="background-color:grey;">Create New Schedules</h1>
-  <label for="dynamodb">Below are the schedules:</label>
-  <ol id="s_list"></ol><br>
-  <button id="schedule_button"></button>
-  <table>
-   <tr>
-      <th>Schedules</th>
-      <th>Periods</th>  
-      <th>Days</th>
-      <th>BeginTime</th>
-      <th>EndTime</th>
-      <th>TimeZone</th>
-      <th>Add/Remove Schedules</th>
-    </tr>
-   <tr>
-   <td rowspan="3">Foodscheduler</td>
-   <td>Lunch</td>
-   <td>"mon"</td>
-   <td>"12:00"</td>
-   <td>"4:00"</td>
-   <td>"Europe/Amsterdam"</td>
-   <td rowspan=3> <input type="button" value="Delete" onclick="deleteRow(this)"/> </td>
-   </tr> 
-   <tr>
-   <td>Dinner</td>
-   <td>"mon"</td>
-   <td>"12:00"</td>
-   <td>"4:00"</td>
-   <td>"Europe/Amsterdam"</td>
-   </tr>
-   
-  <tbody id="table-body">
-   </tbody>
-</table><br>
-<script>
- function list_schedule(){
-     fetch('${api_url}/db')
-     .then(response => response.json())
-     .then(data => {
-              data.schedules_list.forEach(function(id) {
-               schedule = id
-               console.log(schedule)
-               create_tableRow(schedule)
-              });
-     })
-     }
- function create_tableRow(data){
-   schedule = data
-   list_period(schedule)
-   
-   const tableBody = document.getElementById('table-body');
-   const row = document.createElement('tr');
-   const nameCell = document.createElement('td');
-   nameCell.textContent = data;
-   nameCell.rowspan = "3";
-   row.appendChild(nameCell);
-   tableBody.appendChild(row);
-   }
- function list_period(data){
-       schedule = data
-       
-       fetch('${api_url}/db/list_periods', {
-        method: "POST", // Or GET with query params
-        body: schedule,
-        headers: {
-          "Content-Type": "application/json"
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="index.html"><img class="brand-logo" src="technativelogo.svg" alt="TechNative"></a>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav">
+        <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg> Overview</a>
+        <a class="active" href="schedules.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> Schedules</a>
+        <a href="periods.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Periods</a>
+        <a href="instances.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg> Instances</a>
+      </nav>
+      <div class="sidebar-foot"><strong>Configuration source</strong>Schedules and periods are stored in DynamoDB.</div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">Automation</p><h1>Schedules</h1><p class="subtitle">Review your instance operating windows and their assigned periods.</p></div>
+        <div class="top-actions"><a class="btn ghost" href="periods.html">Manage periods</a><button class="btn accent" id="createScheduleButton">+ New schedule</button></div>
+      </header>
+      <section class="summary">
+        <div class="summary-card"><span>Total schedules</span><strong id="totalCount">—</strong></div>
+        <div class="summary-card"><span>Active schedules</span><strong id="activeCount">—</strong></div>
+      </section>
+      <section class="panel">
+        <div class="toolbar">
+          <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="search" type="search" placeholder="Search schedules…" aria-label="Search schedules"></div>
+          <div class="count" id="resultCount">Loading schedules…</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Schedule</th><th>Assigned periods</th><th>Status</th><th></th></tr></thead>
+            <tbody id="scheduleRows">
+              <tr class="skeleton"><td><div></div></td><td><div></div></td><td><div></div></td><td><div></div></td></tr>
+              <tr class="skeleton"><td><div></div></td><td><div></div></td><td><div></div></td><td><div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+  <dialog id="scheduleDialog">
+    <form id="scheduleForm">
+      <div class="dialog-head"><h2>Create schedule</h2><p>Create a named schedule with its first operating period.</p></div>
+      <div class="dialog-body">
+        <div class="form-error" id="scheduleError"></div>
+        <div class="field"><label for="scheduleName">Schedule name</label><input id="scheduleName" required placeholder="production-office-hours" autocomplete="off"><small>This value is used by the InstanceScheduler EC2 tag.</small></div>
+        <div class="field"><label for="initialPeriod">Initial periods</label><select id="initialPeriod" multiple required><option value="">Loading periods…</option></select><small>Select one or more periods. Use Ctrl/Cmd or Shift to select multiple.</small></div>
+      </div>
+      <div class="dialog-actions"><button class="btn ghost" type="button" id="cancelSchedule">Cancel</button><button class="btn accent" type="submit" id="saveSchedule">Create schedule</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script>
+    const apiUrl = '${api_url}';
+    const body = document.getElementById('scheduleRows');
+    let schedules = [];
+
+    function request(path, options) {
+      return fetch(apiUrl + path, options).then(function (response) {
+        return response.text().then(function (text) {
+          let data = {};
+          try { data = text ? JSON.parse(text) : {}; } catch (error) { data = {message:text}; }
+          if (!response.ok) throw new Error(data.message || 'Request failed');
+          return data;
+        });
+      });
+    }
+
+    function toast(message) {
+      const element = document.getElementById('toast');
+      element.textContent = message;
+      element.className = 'toast show';
+      window.setTimeout(function () { element.className = 'toast'; }, 2800);
+    }
+
+    function getPeriods(name) {
+      return fetch(apiUrl + '/db/list_periods', {
+        method: 'POST',
+        headers: {'Content-Type':'text/plain;charset=UTF-8'},
+        body: name
+      }).then(function (response) {
+        if (!response.ok) throw new Error('Could not load periods');
+        return response.json();
+      }).then(function (data) {
+        return (data.period_list || []).map(function (item) { return item.name.S; });
+      }).catch(function () { return []; });
+    }
+
+    function render(filter) {
+      const query = (filter || '').trim().toLowerCase();
+      const visible = schedules.filter(function (item) { return item.name.toLowerCase().includes(query); });
+      body.innerHTML = '';
+      document.getElementById('resultCount').textContent = visible.length + (visible.length === 1 ? ' schedule' : ' schedules');
+      if (!visible.length) {
+        body.innerHTML = '<tr><td colspan="4"><div class="state"><strong>No schedules found</strong>Try a different search term.</div></td></tr>';
+        return;
+      }
+      visible.forEach(function (item) {
+        const row = document.createElement('tr');
+        const nameCell = document.createElement('td');
+        const nameWrap = document.createElement('div');
+        nameWrap.className = 'name';
+        nameWrap.innerHTML = '<span class="name-icon">↗</span><span></span>';
+        nameWrap.querySelector('span:last-child').textContent = item.name;
+        nameCell.appendChild(nameWrap);
+
+        const periodsCell = document.createElement('td');
+        const tags = document.createElement('div');
+        tags.className = 'period-tags';
+        if (item.periods.length) {
+          item.periods.forEach(function (period) {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = period;
+            tags.appendChild(tag);
+          });
+        } else {
+          tags.innerHTML = '<span class="tag">No periods returned</span>';
         }
+        periodsCell.appendChild(tags);
+
+        const statusCell = document.createElement('td');
+        statusCell.innerHTML = '<span class="status">Active</span>';
+        const actionCell = document.createElement('td');
+        const link = document.createElement('a');
+        link.className = 'action';
+        link.href = 'periods.html?schedule=' + encodeURIComponent(item.name);
+        link.textContent = 'Open →';
+        actionCell.appendChild(link);
+        row.appendChild(nameCell); row.appendChild(periodsCell); row.appendChild(statusCell); row.appendChild(actionCell);
+        body.appendChild(row);
+      });
+    }
+
+    fetch(apiUrl + '/db')
+      .then(function (response) { if (!response.ok) throw new Error('API unavailable'); return response.json(); })
+      .then(function (data) {
+        const names = data.schedules_list || [];
+        return Promise.all(names.map(function (name) {
+          return getPeriods(name).then(function (periods) { return {name:name, periods:periods}; });
+        }));
       })
-      
-      .then(response => response.json())
-     // .then(data => response)
-      .catch(error => console.error('Error checking schedule:', error));
-    
-     
-    }  
-   
- list_schedule()
- 
- </script>
- </body>
- </html>
- 
+      .then(function (items) {
+        schedules = items;
+        document.getElementById('totalCount').textContent = items.length;
+        document.getElementById('activeCount').textContent = items.length;
+        render('');
+      })
+      .catch(function () {
+        document.getElementById('totalCount').textContent = '—';
+        document.getElementById('activeCount').textContent = '—';
+        document.getElementById('resultCount').textContent = 'API unavailable';
+        body.innerHTML = '<tr><td colspan="4"><div class="state"><strong>Could not load schedules</strong>Check the API Gateway and Lambda configuration.</div></td></tr>';
+      });
 
+    document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
 
+    const dialog = document.getElementById('scheduleDialog');
+    const initialPeriod = document.getElementById('initialPeriod');
+    document.getElementById('createScheduleButton').addEventListener('click', function () {
+      const error = document.getElementById('scheduleError');
+      error.className = 'form-error';
+      document.getElementById('scheduleName').value = '';
+      initialPeriod.innerHTML = '<option value="">Loading periods…</option>';
+      initialPeriod.disabled = true;
+      dialog.showModal();
+      request('/db/periods')
+        .then(function (data) {
+          const available = data.period_list || [];
+          initialPeriod.innerHTML = '<option value="">Choose a period…</option>';
+          available.forEach(function (period) {
+            const name = period.name && period.name.S ? period.name.S : period.name;
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            initialPeriod.appendChild(option);
+          });
+          initialPeriod.disabled = available.length === 0;
+          if (!available.length) {
+            initialPeriod.innerHTML = '<option value="">Create a period first</option>';
+            error.textContent = 'No periods exist yet. Create a period before creating a schedule.';
+            error.className = 'form-error show';
+          }
+        })
+        .catch(function (error) {
+          initialPeriod.innerHTML = '<option value="">Could not load periods</option>';
+          error.textContent = error.message;
+          error.className = 'form-error show';
+        });
+    });
+    document.getElementById('cancelSchedule').addEventListener('click', function () { dialog.close(); });
+    document.getElementById('scheduleForm').addEventListener('submit', function (event) {
+      event.preventDefault();
+      const name = document.getElementById('scheduleName').value.trim();
+      const periods = Array.from(initialPeriod.selectedOptions).map(function (option) { return option.value; }).filter(Boolean);
+      const error = document.getElementById('scheduleError');
+      if (!name || !periods.length) {
+        error.textContent = 'Select at least one period.';
+        error.className = 'form-error show';
+        return;
+      }
+      const save = document.getElementById('saveSchedule');
+      save.disabled = true;
+      request('/db/create_schedule', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({schedule_name:name, period_names:periods})
+      })
+        .then(function () {
+          dialog.close();
+          toast('Schedule created');
+          window.location.href = 'periods.html?schedule=' + encodeURIComponent(name);
+        })
+        .catch(function (requestError) {
+          error.textContent = requestError.message;
+          error.className = 'form-error show';
+          save.disabled = false;
+        });
+    });
+  </script>
+</body>
+</html>

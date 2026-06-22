@@ -1,7 +1,7 @@
 
 
 module "webpage_lambda" {
-  source = "github.com/wearetechnative/terraform-aws-lambda.git?ref=fe102f9e43209b47bf919be75066df102458d8d9"
+  source            = "github.com/wearetechnative/terraform-aws-lambda.git?ref=fe102f9e43209b47bf919be75066df102458d8d9"
   name              = "webpage_hosting_s3"
   role_arn          = module.iam_role_webpage_scheduler.role_arn
   role_arn_provided = true
@@ -15,9 +15,9 @@ module "webpage_lambda" {
   source_type               = "local"
   source_directory_location = "${path.module}/webpage_lambda"
   source_file_name          = null
-  sqs_dlq_arn = var.sqs_arn
+  sqs_dlq_arn               = var.sqs_arn
   environment_variables = {
-    TABLENAME = var.dynamodb_table_name  
+    TABLENAME = var.dynamodb_table_name
   }
 }
 

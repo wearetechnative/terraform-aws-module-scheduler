@@ -1,238 +1,487 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>API Gateway Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#112f41">
+  <title>Periods · Instance Scheduler</title>
   <style>
-    /* Table styles */
-    table {
-      width: 100%;
-      border-collapse: collapse; /* Makes sure borders between cells are combined */
-    }
-    th, td {
-      border: 1px solid black; /* Adds borders to each cell */
-      padding: 8px;  /* Adds space inside each cell */
-      text-align: left; /* Aligns text to the left */
-    }
-    th {
-      background-color: #f2f2f2; /* Light gray background for header cells */
-    }
+    :root { --ink:#112f41; --muted:#607582; --line:#dce7eb; --paper:#f3f7f8; --accent:#72c8d3; --dark:#112f41; --danger:#a93838; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:inherit; text-decoration:none; }
+    button,input,select { font:inherit; }
+    .shell { min-height:100vh; display:grid; grid-template-columns:248px 1fr; }
+    .sidebar { position:sticky; top:0; height:100vh; padding:28px 20px; background:var(--dark); color:#fff; display:flex; flex-direction:column; }
+    .brand { display:block; margin-bottom:28px; padding:10px 12px; border-radius:12px; background:#fff; }
+    .brand-logo { display:block; width:100%; height:auto; }
+    .nav-label { margin:0 10px 9px; color:#89938e; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.11em; }
+    .nav { display:grid; gap:6px; }
+    .nav a { display:flex; gap:12px; align-items:center; padding:11px 12px; border-radius:10px; color:#aeb8b2; font-weight:600; }
+    .nav a:hover,.nav a.active { color:#fff; background:#1b4359; }
+    .nav a.active::before { content:""; width:4px; height:18px; border-radius:9px; background:var(--accent); margin-left:-12px; }
+    .nav svg { width:18px; height:18px; }
+    .sidebar-foot { margin-top:auto; padding:16px; border:1px solid #35413b; border-radius:14px; color:#9da8a2; font-size:12px; }
+    .sidebar-foot strong { display:block; color:#fff; font-size:13px; margin-bottom:4px; }
+    main { padding:36px 44px 60px; min-width:0; }
+    .topbar { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:28px; }
+    .eyebrow { margin:0 0 5px; color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
+    h1 { margin:0; font-size:clamp(30px,3vw,42px); line-height:1.08; letter-spacing:-.045em; }
+    .subtitle { margin:8px 0 0; color:var(--muted); }
+    .selector-card { display:flex; justify-content:space-between; align-items:center; gap:22px; padding:20px 22px; margin-bottom:20px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+    .selector-card label { display:block; margin-bottom:4px; font-size:12px; font-weight:750; }
+    .selector-card p { margin:0; color:var(--muted); font-size:12px; }
+    select,input { height:42px; padding:0 12px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); outline:none; }
+    select:focus,input:focus { border-color:#9aa68f; box-shadow:0 0 0 3px #edf2e4; }
+    #scheduleDropdown { min-width:260px; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+    .panel-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 20px; border-bottom:1px solid var(--line); }
+    .panel-head h2 { margin:0; font-size:16px; letter-spacing:-.02em; }
+    .panel-head span { color:var(--muted); font-size:12px; }
+    .btn { min-height:40px; padding:0 15px; display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:9px; background:var(--dark); color:#fff; cursor:pointer; font-weight:700; }
+    .btn:disabled { cursor:not-allowed; opacity:.45; }
+    .btn.accent { background:var(--accent); color:var(--dark); }
+    .btn.ghost { color:var(--muted); background:#f2f4f0; }
+    .btn.danger { color:var(--danger); background:#fff0f0; }
+    table { width:100%; border-collapse:collapse; }
+    th { padding:13px 18px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    td { padding:16px 18px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    tbody tr:last-child td { border-bottom:0; }
+    .period-name { font-weight:730; }
+    .days { display:flex; gap:4px; flex-wrap:wrap; }
+    .day { width:28px; height:27px; display:grid; place-items:center; border-radius:7px; color:#536058; background:#eef1ec; font-size:10px; font-weight:750; text-transform:uppercase; }
+    .time { font-variant-numeric:tabular-nums; font-weight:650; }
+    .timezone { color:var(--muted); font-size:12px; }
+    .schedule-tags { display:flex; flex-wrap:wrap; gap:5px; min-width:130px; }
+    .schedule-tag { padding:4px 7px; border-radius:7px; color:#465149; background:#eef1ec; font-size:10px; font-weight:700; }
+    .unassigned { color:#8a6c2f; font-size:11px; font-weight:700; }
+    .state { padding:66px 20px; text-align:center; color:var(--muted); }
+    .state-icon { width:45px; height:45px; margin:0 auto 12px; display:grid; place-items:center; border-radius:13px; background:#f0f3ed; color:var(--ink); font-size:19px; }
+    .state strong { display:block; color:var(--ink); margin-bottom:4px; }
+    .form-row { background:#fbfcfa; }
+    .form-row td { vertical-align:top; }
+    .field-label { display:block; margin-bottom:6px; color:var(--muted); font-size:10px; font-weight:750; text-transform:uppercase; letter-spacing:.06em; }
+    .form-row input,.form-row select { width:100%; min-width:110px; }
+    .day-picker { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; min-width:180px; }
+    .day-picker label { cursor:pointer; }
+    .day-picker input { position:absolute; opacity:0; pointer-events:none; }
+    .day-picker span { height:28px; display:grid; place-items:center; border:1px solid var(--line); border-radius:7px; background:#fff; font-size:10px; font-weight:750; text-transform:uppercase; }
+    .day-picker input:checked + span { border-color:var(--dark); background:var(--dark); color:#fff; }
+    .form-actions { display:flex; gap:7px; }
+    .toast { position:fixed; right:24px; bottom:24px; max-width:360px; padding:13px 16px; border-radius:11px; background:var(--dark); color:#fff; box-shadow:0 15px 40px rgba(0,0,0,.18); transform:translateY(20px); opacity:0; pointer-events:none; transition:.2s ease; font-size:13px; font-weight:650; }
+    .toast.show { transform:translateY(0); opacity:1; }
+    .toast.error { background:#8d3030; }
+    @media (max-width:1000px) { .table-wrap{overflow-x:auto}table{min-width:900px} }
+    @media (max-width:900px) { .shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:18px 20px}.brand{padding-bottom:15px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}main{padding:28px 20px 50px} }
+    @media (max-width:620px) { .topbar{align-items:flex-start;flex-direction:column}.selector-card{align-items:flex-start;flex-direction:column}#scheduleDropdown{width:100%;min-width:0}.selector-card>div:last-child{width:100%} }
   </style>
 </head>
-
 <body>
-  <h1 style="background-color:yellow;">Instance Scheduler Page</h1>
-  <label for="dynamodb">These are the schedule list:</label>
-  <select id="scheduleDropdown" name="scheduleDropdown" onchange="list_period()"> <option disabled selected value> -- select an option -- </option></select><br>
-  <div id="result"></div><br>
-  <table>
-   <tr>
-      <th>Period Name</th>
-      <th>Days</th>
-      <th>Begin Time</th>
-      <th>End Time</th>
-      <th>Timezone</th>
-      <th>Add/Remove</th>
-    </tr>
-  <tbody id="table-body">
-   </tbody>
-</table><br>
-<button id="button_id"></button>
-<div id="message"></div>
-  
-    <script>
-   function schedule_list() {
-      fetch('${api_url}/db') 
-        .then(response => response.json())
-        .then(data => {
-          let dropdown = document.getElementById("scheduleDropdown");
-          data.schedules_list.forEach(function(id) {
-            let option = document.createElement("option");
-            option.value = id;
-            option.text = id;
-            dropdown.add(option);
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="index.html"><img class="brand-logo" src="technativelogo.svg" alt="TechNative"></a>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav">
+        <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg> Overview</a>
+        <a href="schedules.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> Schedules</a>
+        <a class="active" href="periods.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Periods</a>
+        <a href="instances.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg> Instances</a>
+      </nav>
+      <div class="sidebar-foot"><strong>Safety rule</strong>Every schedule must retain at least one period.</div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">Time windows</p><h1>Periods</h1><p class="subtitle">Set the exact days and hours when a schedule should keep instances running.</p></div>
+        <div class="form-actions">
+          <button class="btn ghost" id="assignButton" disabled>Assign existing</button>
+          <button class="btn accent" id="addButton" disabled>+ Create period</button>
+        </div>
+      </header>
+      <section class="selector-card">
+        <div><label for="scheduleDropdown">View</label><p>Browse every period, including unassigned periods, or filter by schedule.</p></div>
+        <div><select id="scheduleDropdown" disabled><option value="">Loading schedules…</option></select></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div><h2 id="panelTitle">Schedule periods</h2><span id="periodCount">Select a schedule to continue</span></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Period name</th><th>Days</th><th>Start</th><th>Stop</th><th>Timezone</th><th>Schedules</th><th>Action</th></tr></thead>
+            <tbody id="periodRows"><tr><td colspan="7"><div class="state"><div class="state-icon">◷</div><strong>No schedule selected</strong>Choose a schedule above to view its periods.</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script>
+    const apiUrl = '${api_url}';
+    const configuredSchedules = ${schedule_names};
+    const dropdown = document.getElementById('scheduleDropdown');
+    const rows = document.getElementById('periodRows');
+    const addButton = document.getElementById('addButton');
+    const assignButton = document.getElementById('assignButton');
+    let periods = [];
+    let adding = false;
+    let assigning = false;
+    let editingPeriod = null;
+
+    function toast(message, isError) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.className = 'toast show' + (isError ? ' error' : '');
+      window.setTimeout(function () { el.className = 'toast'; }, 2800);
+    }
+
+    function request(path, options) {
+      return fetch(apiUrl + path, options).then(function (response) {
+        return response.text().then(function (text) {
+          if (!response.ok) throw new Error(text || 'Request failed');
+          if (!text) return {};
+
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (error) {
+            return text;
+          }
+
+          // Also support invoking the Lambda response shape directly.
+          if (data && typeof data.body === 'string') {
+            try {
+              return JSON.parse(data.body);
+            } catch (error) {
+              return data.body;
+            }
+          }
+          return data;
+        });
+      });
+    }
+
+    function render() {
+      const showingAll = dropdown.value === '__all__';
+      rows.innerHTML = '';
+      document.getElementById('periodCount').textContent = periods.length + (periods.length === 1 ? ' period' : ' periods') + (showingAll ? ' total' : ' assigned');
+      if (!periods.length && !adding && !assigning && !editingPeriod) {
+        rows.innerHTML = '<tr><td colspan="7"><div class="state"><div class="state-icon">◷</div><strong>No periods found</strong>' + (showingAll ? 'Create a period to make it available for future schedules.' : 'This schedule does not have any assigned periods.') + '</div></td></tr>';
+        return;
+      }
+      periods.forEach(function (period) {
+        const periodName = attributeValue(period.name, '');
+        const periodDays = attributeValue(period.days, []);
+        const beginTime = attributeValue(period.begintime, '');
+        const endTime = attributeValue(period.endtime, '');
+        const periodTimezone = attributeValue(period.timezone, '');
+        const assignedSchedules = attributeValue(period.schedules, showingAll ? [] : [dropdown.value]);
+        const row = document.createElement('tr');
+        const name = document.createElement('td'); name.className = 'period-name'; name.textContent = periodName;
+        const daysCell = document.createElement('td'); const days = document.createElement('div'); days.className = 'days';
+        periodDays.forEach(function (day) { const item = document.createElement('span'); item.className = 'day'; item.textContent = day; days.appendChild(item); });
+        daysCell.appendChild(days);
+        const start = document.createElement('td'); start.className = 'time'; start.textContent = beginTime;
+        const end = document.createElement('td'); end.className = 'time'; end.textContent = endTime;
+        const zone = document.createElement('td'); zone.className = 'timezone'; zone.textContent = periodTimezone;
+        const scheduleCell = document.createElement('td');
+        const scheduleTags = document.createElement('div');
+        scheduleTags.className = 'schedule-tags';
+        if (assignedSchedules.length) {
+          assignedSchedules.forEach(function (scheduleName) {
+            const tag = document.createElement('span');
+            tag.className = 'schedule-tag';
+            tag.textContent = scheduleName;
+            scheduleTags.appendChild(tag);
           });
-        })
-        .catch(error => console.error('Error loading instances:', error));
-    }
-    function list_period(){
-       const schedule = document.getElementById("scheduleDropdown").value;
-        cleartable()
-       fetch('${api_url}/db/list_periods', {
-        method: "POST", // Or GET with query params
-        body: schedule,
-        headers: {
-          "Content-Type": "application/json"
+        } else {
+          scheduleTags.innerHTML = '<span class="unassigned">Unassigned</span>';
         }
-      })
-      .then(response => response.json())
-      .then(data => createTableRows(data))  
-      .catch(error => console.error('Error checking schedule:', error));
-    
-     
+        scheduleCell.appendChild(scheduleTags);
+        const action = document.createElement('td');
+        const actions = document.createElement('div');
+        actions.className = 'form-actions';
+        const editButton = document.createElement('button');
+        editButton.className = 'btn ghost';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', function () { startEditing(period); });
+        actions.appendChild(editButton);
+        if (showingAll) {
+          if (!assignedSchedules.length) {
+            const button = document.createElement('button');
+            button.className = 'btn danger';
+            button.textContent = 'Delete';
+            button.addEventListener('click', function () { deletePeriodDefinition(periodName); });
+            actions.appendChild(button);
+          } else {
+            const inUse = document.createElement('span');
+            inUse.textContent = 'In use';
+            inUse.className = 'timezone';
+            actions.appendChild(inUse);
+          }
+        } else {
+          const button = document.createElement('button'); button.className = 'btn danger'; button.textContent = 'Remove';
+          button.addEventListener('click', function () { removePeriod(periodName); }); actions.appendChild(button);
+        }
+        action.appendChild(actions);
+        row.appendChild(name); row.appendChild(daysCell); row.appendChild(start); row.appendChild(end); row.appendChild(zone); row.appendChild(scheduleCell); row.appendChild(action);
+        rows.appendChild(row);
+      });
+      if (adding || editingPeriod) renderForm(editingPeriod);
+      if (assigning) renderAssignmentForm();
     }
-    
- function deleteRow(button) {
-     const tr = button.parentNode.parentNode;
-     const periodName = tr.cells[0].textContent.trim();
-     const schedule = document.getElementById("scheduleDropdown").value;
-     if (!confirm(`Do you really want to delete period "$${periodName}"?`))   {
-        return;    
-  }
-    const table = document.getElementById("table-body");
-	const numRows = table.rows.length;
-    if(numRows > 1){
-    var delete_item = {
-       period_name : periodName,
-       selected_schedule: schedule
-       }
-    console.log('"$${periodName}" is getting deleted...');
-    fetch('${api_url}/db/delete_period', {
-          method: "POST", // Or GET with query params
-          body: JSON.stringify(delete_item),
-          headers: {
-            "Content-Type": "application/json"
+
+    function attributeValue(attribute, fallback) {
+      if (attribute === undefined || attribute === null) return fallback;
+      if (typeof attribute !== 'object' || Array.isArray(attribute)) return attribute;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'S')) return attribute.S;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'SS')) return attribute.SS;
+      return fallback;
+    }
+
+    function renderForm(period) {
+      const isEditing = Boolean(period);
+      const periodName = isEditing ? attributeValue(period.name, '') : '';
+      const periodDays = isEditing ? attributeValue(period.days, []) : [];
+      const beginTime = isEditing ? attributeValue(period.begintime, '') : '09:00';
+      const endTime = isEditing ? attributeValue(period.endtime, '') : '17:00';
+      const periodTimezone = isEditing ? attributeValue(period.timezone, '') : 'Europe/Amsterdam';
+      const assignedSchedules = isEditing ? attributeValue(period.schedules, dropdown.value === '__all__' ? [] : [dropdown.value]) : [];
+      const row = document.createElement('tr');
+      row.className = 'form-row';
+      row.innerHTML =
+        '<td><label class="field-label" for="periodName">Name</label><input id="periodName" placeholder="office-hours"' + (isEditing ? ' disabled' : '') + '></td>' +
+        '<td><span class="field-label">Weekdays</span><div class="day-picker">' +
+        ['mon','tue','wed','thu','fri','sat','sun'].map(function (day) { return '<label><input type="checkbox" name="day" value="' + day + '"><span>' + day + '</span></label>'; }).join('') +
+        '</div></td>' +
+        '<td><label class="field-label" for="beginTime">Start time</label><input id="beginTime" type="time"></td>' +
+        '<td><label class="field-label" for="endTime">Stop time</label><input id="endTime" type="time"></td>' +
+        '<td><label class="field-label" for="timezone">Timezone</label><select id="timezone"><option>Europe/Amsterdam</option><option>Europe/London</option><option>UTC</option><option>America/New_York</option><option>America/Los_Angeles</option><option>Asia/Kolkata</option><option>Asia/Singapore</option><option>Australia/Sydney</option></select></td>' +
+        '<td><span class="field-label">Schedules</span><span class="unassigned">' + escapeHtml(assignedSchedules.length ? assignedSchedules.join(', ') : (dropdown.value === '__all__' ? 'Unassigned' : dropdown.value)) + '</span></td>' +
+        '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="savePeriod">' + (isEditing ? 'Update' : 'Save') + '</button><button class="btn ghost" id="cancelPeriod">Cancel</button></div></td>';
+      rows.appendChild(row);
+      document.getElementById('periodName').value = periodName;
+      document.getElementById('beginTime').value = beginTime;
+      document.getElementById('endTime').value = endTime;
+      document.getElementById('timezone').value = periodTimezone;
+      document.querySelectorAll('input[name="day"]').forEach(function (checkbox) {
+        checkbox.checked = periodDays.includes(checkbox.value);
+      });
+      document.getElementById('savePeriod').addEventListener('click', savePeriod);
+      document.getElementById('cancelPeriod').addEventListener('click', function () {
+        adding = false;
+        editingPeriod = null;
+        addButton.disabled = false;
+        assignButton.disabled = dropdown.value === '__all__';
+        render();
+      });
+      document.getElementById('periodName').focus();
+    }
+
+    function startEditing(period) {
+      editingPeriod = period;
+      adding = false;
+      assigning = false;
+      addButton.disabled = false;
+      assignButton.disabled = dropdown.value === '__all__';
+      render();
+      document.getElementById('beginTime').focus();
+    }
+
+    function renderAssignmentForm() {
+      const row = document.createElement('tr');
+      row.className = 'form-row';
+      row.innerHTML = '<td colspan="6"><label class="field-label" for="existingPeriod">Existing period</label><select id="existingPeriod"><option value="">Loading available periods…</option></select></td>' +
+        '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="confirmAssignment" disabled>Assign</button><button class="btn ghost" id="cancelAssignment">Cancel</button></div></td>';
+      rows.appendChild(row);
+
+      const select = document.getElementById('existingPeriod');
+      const confirmButton = document.getElementById('confirmAssignment');
+      document.getElementById('cancelAssignment').addEventListener('click', function () {
+        assigning = false;
+        assignButton.disabled = false;
+        render();
+      });
+      select.addEventListener('change', function () { confirmButton.disabled = !select.value; });
+      confirmButton.addEventListener('click', assignExistingPeriod);
+
+      const assignedNames = periods.map(function (period) { return attributeValue(period.name, ''); });
+      request('/db/periods')
+        .then(function (data) {
+          const available = (data.period_list || []).filter(function (period) {
+            return !assignedNames.includes(attributeValue(period.name, ''));
+          });
+          select.innerHTML = '<option value="">Choose a period…</option>';
+          available.forEach(function (period) {
+            const name = attributeValue(period.name, '');
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+          });
+          if (!available.length) {
+            select.innerHTML = '<option value="">No unassigned periods available</option>';
+            select.disabled = true;
           }
         })
-     list_period()     
-     }
-    else{
-     // document.getElementById("message").innerText = "Period List can't be empty"
-     {alert("Period List can't be empty")}
-    } 
-  }
-   
-   function createTableRows(data) {
-   const tableBody = document.getElementById('table-body');
-  
-  // Check if data exists
-  if (!data || !data.period_list) {
-    console.error("Invalid data format.");
-    return;
-  }
-  
-  data.period_list.forEach(period => {
-    const row = document.createElement('tr');
-    
-    // Extract values from the Lambda response
-    const nameCell = document.createElement('td');
-    nameCell.textContent = period.name.S;
-    const daysCell = document.createElement('td');
-    daysCell.textContent = period.days.SS.join(', ');
-    
-    const begintimeCell = document.createElement('td');
-    begintimeCell.textContent = period.begintime.S;
-    
-    const endtimeCell = document.createElement('td');
-    endtimeCell.textContent = period.endtime.S;
-    const timezoneCell = document.createElement('td');
-    timezoneCell.textContent = period.timezone.S;
-    const removecell = document.createElement('td');
-    removecell.innerHTML='<input type="button" value="Delete" onclick="deleteRow(this)"/>';
-    
-    // Append cells to the row
-    row.appendChild(nameCell);
-    row.appendChild(daysCell);
-    row.appendChild(begintimeCell);
-    row.appendChild(endtimeCell);
-    row.appendChild(timezoneCell);
-    row.appendChild(removecell);
-    
-    // Append the row to the table body
-    tableBody.appendChild(row);
-  });
-  create_button("add")
-  
-}
-
-function create_button(cont){
-        if (cont.includes("add")){
-        document.getElementById("button_id").innerText ="Click to add a period to the schedule"
-        document.getElementById("button_id").onclick = add
-        }
-        
-  }
-      
-
-function cleartable() {
-    
-      document.getElementById("table-body").innerText = '';
+        .catch(function (error) {
+          console.error('Available period loading failed:', error);
+          select.innerHTML = '<option value="">Could not load periods</option>';
+          select.disabled = true;
+          toast('Could not load available periods', true);
+        });
     }
 
-    
-function add(){
-    var table = document.getElementById('table-body');
-    var row = table.insertRow();
-    var namecell = row.insertCell(0);
-    var dayscell = row.insertCell(1);
-    var begintimecell = row.insertCell(2);
-    var endtimecell = row.insertCell(3);
-    var timezonecell = row.insertCell(4);
-    var removecell = row.insertCell(5);
-    namecell.innerHTML = `<input type="text" placeholder="Enter period name" id="period_name"/>`;
-    removecell.innerHTML = `<input type="button" value="Add" onclick="add_dynamodb()"/>`;
-    dayscell.innerHTML = `<select multiple id="days">
-    <option value="mon">Mon</option>
-    <option value="tue">Tue</option>
-    <option value="wed">Wed</option>
-    <option value="thu">Thu</option>
-    <option value="fri">Fri</option>
-    <option value="sat">Sat</option>
-    <option value="sun">Sun</option>
-  </select>`;
-    begintimecell.innerHTML = `<input type="text" placeholder="Enter Begin Time" id="begin_time"/>`
-    endtimecell.innerHTML = `<input type="text" placeholder="Enter End Time" id="end_time" />`
-    timezonecell.innerHTML = `<select id="timezone">
-    <option value="Europe/Amsterdam">Europe/Amsterdam</option>
-    <option value="Europe/London">Europe/London</option>
-    <option value="America/New_York">America/New_York</option>
-    <option value="Asia/Kolkata">Asia/Kolkata</option>
-    <option value="Australia/Sydney">Australia/Sydney</option>
-  </select>`;
-   
-    
-}
-
-function add_dynamodb(){
-var period = document.getElementById("period_name").value;
-var days = document.querySelector('#days');
-var selectedDays = Array.from(days.options) // Convert options to an array
-    .filter(option => option.selected)      // Filter selected options
-    .map(option => option.value);  
-
-var begintime = document.getElementById("begin_time").value;
-var endtime = document.getElementById("end_time").value;
-var timezone = document.getElementById("timezone").value;
-var schedule = document.getElementById("scheduleDropdown").value;
-var add_item = {
-     period_name : period,
-     selected_days: selectedDays,
-     begin_time: begintime,
-     end_time: endtime,
-     timezone: timezone,
-     schedule_name: schedule
-  };
-//var test = JSON.stringify(json)  
-
-//console.log(json);
-fetch('${api_url}/db/add_period', {
-        method: "POST", // Or GET with query params
-        body: JSON.stringify(add_item),
-        headers: {
-          "Content-Type": "application/json"
-        }
+    function assignExistingPeriod() {
+      const select = document.getElementById('existingPeriod');
+      const button = document.getElementById('confirmAssignment');
+      if (!select.value || !dropdown.value || dropdown.value === '__all__') return;
+      button.disabled = true;
+      request('/db/assign_period', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({period_name:select.value, schedule_name:dropdown.value})
       })
-{alert("The period is added to the schedule")}     
- list_period()
-         
-}
+        .then(function () {
+          assigning = false;
+          toast('Period assigned to ' + dropdown.value);
+          loadPeriods();
+        })
+        .catch(function (error) {
+          console.error('Period assignment failed:', error);
+          toast('Could not assign the period', true);
+          button.disabled = false;
+        });
+    }
 
+    function loadPeriods() {
+      const schedule = dropdown.value;
+      addButton.disabled = !schedule;
+      assignButton.disabled = !schedule || schedule === '__all__';
+      adding = false;
+      assigning = false;
+      editingPeriod = null;
+      if (!schedule) {
+        periods = [];
+        document.getElementById('panelTitle').textContent = 'Schedule periods';
+        document.getElementById('periodCount').textContent = 'Select a schedule to continue';
+        rows.innerHTML = '<tr><td colspan="7"><div class="state"><div class="state-icon">◷</div><strong>No schedule selected</strong>Choose a schedule above to view its periods.</div></td></tr>';
+        return;
+      }
+      const showingAll = schedule === '__all__';
+      document.getElementById('panelTitle').textContent = showingAll ? 'All periods' : schedule;
+      rows.innerHTML = '<tr><td colspan="7"><div class="state">Loading periods…</div></td></tr>';
+      const requestPath = showingAll ? '/db/periods' : '/db/list_periods';
+      const requestOptions = showingAll ? undefined : {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({schedule_name:schedule})
+      };
+      request(requestPath, requestOptions)
+        .then(function (data) { periods = data.period_list || []; render(); })
+        .catch(function (error) {
+          console.error('Period loading failed:', error);
+          rows.innerHTML = '<tr><td colspan="7"><div class="state"><strong>Could not load periods</strong>' + escapeHtml(error.message || 'Check the API and try again.') + '</div></td></tr>';
+          toast('Could not load periods', true);
+        });
+    }
 
+    function escapeHtml(value) {
+      const element = document.createElement('div');
+      element.textContent = value;
+      return element.innerHTML;
+    }
 
-schedule_list(); 
-   
-    </script>
+    function savePeriod() {
+      const name = document.getElementById('periodName').value.trim();
+      const selectedDays = Array.from(document.querySelectorAll('input[name="day"]:checked')).map(function (item) { return item.value; });
+      const begin = document.getElementById('beginTime').value;
+      const end = document.getElementById('endTime').value;
+      if (!name || !selectedDays.length || !begin || !end) { toast('Enter a name, times, and at least one weekday.', true); return; }
+      if (!editingPeriod && periods.some(function (item) { return attributeValue(item.name, '') === name; })) { toast('This schedule already contains that period.', true); return; }
+      const showingAll = dropdown.value === '__all__';
+      const payload = {period_name:name, selected_days:selectedDays, begin_time:begin, end_time:end, timezone:document.getElementById('timezone').value};
+      if (!showingAll) payload.schedule_name = dropdown.value;
+      document.getElementById('savePeriod').disabled = true;
+      const requestPath = editingPeriod ? '/db/update_period' : (showingAll ? '/db/create_period' : '/db/add_period');
+      request(requestPath, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
+        .then(function () {
+          const wasEditing = Boolean(editingPeriod);
+          adding = false;
+          editingPeriod = null;
+          toast(wasEditing ? 'Period updated' : (showingAll ? 'Unassigned period created' : 'Period added to ' + dropdown.value));
+          loadPeriods();
+        })
+        .catch(function () { toast(editingPeriod ? 'Could not update the period' : 'Could not add the period', true); document.getElementById('savePeriod').disabled = false; });
+    }
 
+    function removePeriod(name) {
+      if (periods.length <= 1) { toast('A schedule must keep at least one period.', true); return; }
+      if (!window.confirm('Remove “' + name + '” from ' + dropdown.value + '?')) return;
+      const payload = {period_name:name, selected_schedule:dropdown.value};
+      request('/db/delete_period', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
+        .then(function () { toast('Period removed'); loadPeriods(); })
+        .catch(function () { toast('Could not remove the period', true); });
+    }
 
+    function deletePeriodDefinition(name) {
+      if (!window.confirm('Permanently delete the unassigned period “' + name + '”?')) return;
+      request('/db/delete_period_definition', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({period_name:name})
+      })
+        .then(function () {
+          toast('Period deleted');
+          loadPeriods();
+        })
+        .catch(function (error) {
+          console.error('Period deletion failed:', error);
+          toast('Could not delete period: ' + error.message, true);
+        });
+    }
 
+    function populateSchedules(schedules) {
+        dropdown.innerHTML = '<option value="__all__">All periods</option><option value="" disabled>──────────</option>';
+        schedules.forEach(function (name) {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          dropdown.appendChild(option);
+        });
+        dropdown.disabled = false;
+        const requested = new URLSearchParams(window.location.search).get('schedule');
+        dropdown.value = requested && Array.from(dropdown.options).some(function (option) { return option.value === requested; }) ? requested : '__all__';
+        loadPeriods();
+    }
 
+    request('/db')
+      .then(function (data) {
+        const apiSchedules = data && Array.isArray(data.schedules_list) ? data.schedules_list : [];
+        populateSchedules(apiSchedules.length ? apiSchedules : configuredSchedules);
+      })
+      .catch(function (error) {
+        console.error('Schedule API loading failed:', error);
+        populateSchedules(configuredSchedules);
+        toast(configuredSchedules.length ? 'Using schedules from the Terraform configuration' : 'Schedule API unavailable; showing all periods', false);
+      });
 
+    dropdown.addEventListener('change', loadPeriods);
+    addButton.addEventListener('click', function () {
+      if (!dropdown.value || adding) return;
+      adding = true;
+      assigning = false;
+      editingPeriod = null;
+      addButton.disabled = true;
+      assignButton.disabled = dropdown.value === '__all__';
+      render();
+    });
+    assignButton.addEventListener('click', function () {
+      if (!dropdown.value || dropdown.value === '__all__' || assigning) return;
+      assigning = true;
+      adding = false;
+      editingPeriod = null;
+      assignButton.disabled = true;
+      addButton.disabled = false;
+      render();
+    });
+  </script>
+</body>
+</html>

@@ -83,8 +83,12 @@ def handler(event, context):
                         return 'start'
                         
                     else:
-                        return('stop')
                         print('not starting')
+                        return('stop')
+
+            else:
+                print("Day not in schedule")
+                return('stop')
 
     def delete_tag(instance_id):
         client = boto3.client('ec2')
