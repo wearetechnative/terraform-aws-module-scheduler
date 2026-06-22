@@ -123,6 +123,7 @@
     let periods = [];
     let adding = false;
     let assigning = false;
+    let editingPeriod = null;
 
     function toast(message, isError) {
       const el = document.getElementById('toast');
@@ -161,7 +162,7 @@
       const showingAll = dropdown.value === '__all__';
       rows.innerHTML = '';
       document.getElementById('periodCount').textContent = periods.length + (periods.length === 1 ? ' period' : ' periods') + (showingAll ? ' total' : ' assigned');
-      if (!periods.length && !adding && !assigning) {
+      if (!periods.length && !adding && !assigning && !editingPeriod) {
         rows.innerHTML = '<tr><td colspan="7"><div class="state"><div class="state-icon">◷</div><strong>No periods found</strong>' + (showingAll ? 'Create a period to make it available for future schedules.' : 'This schedule does not have any assigned periods.') + '</div></td></tr>';
         return;
       }
@@ -195,25 +196,35 @@
         }
         scheduleCell.appendChild(scheduleTags);
         const action = document.createElement('td');
+        const actions = document.createElement('div');
+        actions.className = 'form-actions';
+        const editButton = document.createElement('button');
+        editButton.className = 'btn ghost';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', function () { startEditing(period); });
+        actions.appendChild(editButton);
         if (showingAll) {
           if (!assignedSchedules.length) {
             const button = document.createElement('button');
             button.className = 'btn danger';
             button.textContent = 'Delete';
             button.addEventListener('click', function () { deletePeriodDefinition(periodName); });
-            action.appendChild(button);
+            actions.appendChild(button);
           } else {
-            action.textContent = 'In use';
-            action.className = 'timezone';
+            const inUse = document.createElement('span');
+            inUse.textContent = 'In use';
+            inUse.className = 'timezone';
+            actions.appendChild(inUse);
           }
         } else {
           const button = document.createElement('button'); button.className = 'btn danger'; button.textContent = 'Remove';
-          button.addEventListener('click', function () { removePeriod(periodName); }); action.appendChild(button);
+          button.addEventListener('click', function () { removePeriod(periodName); }); actions.appendChild(button);
         }
+        action.appendChild(actions);
         row.appendChild(name); row.appendChild(daysCell); row.appendChild(start); row.appendChild(end); row.appendChild(zone); row.appendChild(scheduleCell); row.appendChild(action);
         rows.appendChild(row);
       });
-      if (adding) renderForm();
+      if (adding || editingPeriod) renderForm(editingPeriod);
       if (assigning) renderAssignmentForm();
     }
 
@@ -225,28 +236,53 @@
       return fallback;
     }
 
-    function renderForm() {
+    function renderForm(period) {
+      const isEditing = Boolean(period);
+      const periodName = isEditing ? attributeValue(period.name, '') : '';
+      const periodDays = isEditing ? attributeValue(period.days, []) : [];
+      const beginTime = isEditing ? attributeValue(period.begintime, '') : '09:00';
+      const endTime = isEditing ? attributeValue(period.endtime, '') : '17:00';
+      const periodTimezone = isEditing ? attributeValue(period.timezone, '') : 'Europe/Amsterdam';
+      const assignedSchedules = isEditing ? attributeValue(period.schedules, dropdown.value === '__all__' ? [] : [dropdown.value]) : [];
       const row = document.createElement('tr');
       row.className = 'form-row';
       row.innerHTML =
-        '<td><label class="field-label" for="periodName">Name</label><input id="periodName" placeholder="office-hours"></td>' +
+        '<td><label class="field-label" for="periodName">Name</label><input id="periodName" placeholder="office-hours"' + (isEditing ? ' disabled' : '') + '></td>' +
         '<td><span class="field-label">Weekdays</span><div class="day-picker">' +
         ['mon','tue','wed','thu','fri','sat','sun'].map(function (day) { return '<label><input type="checkbox" name="day" value="' + day + '"><span>' + day + '</span></label>'; }).join('') +
         '</div></td>' +
-        '<td><label class="field-label" for="beginTime">Start time</label><input id="beginTime" type="time" value="09:00"></td>' +
-        '<td><label class="field-label" for="endTime">Stop time</label><input id="endTime" type="time" value="17:00"></td>' +
+        '<td><label class="field-label" for="beginTime">Start time</label><input id="beginTime" type="time"></td>' +
+        '<td><label class="field-label" for="endTime">Stop time</label><input id="endTime" type="time"></td>' +
         '<td><label class="field-label" for="timezone">Timezone</label><select id="timezone"><option>Europe/Amsterdam</option><option>Europe/London</option><option>UTC</option><option>America/New_York</option><option>America/Los_Angeles</option><option>Asia/Kolkata</option><option>Asia/Singapore</option><option>Australia/Sydney</option></select></td>' +
-        '<td><span class="field-label">Schedules</span><span class="unassigned">' + (dropdown.value === '__all__' ? 'Unassigned' : escapeHtml(dropdown.value)) + '</span></td>' +
-        '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="savePeriod">Save</button><button class="btn ghost" id="cancelPeriod">Cancel</button></div></td>';
+        '<td><span class="field-label">Schedules</span><span class="unassigned">' + escapeHtml(assignedSchedules.length ? assignedSchedules.join(', ') : (dropdown.value === '__all__' ? 'Unassigned' : dropdown.value)) + '</span></td>' +
+        '<td><span class="field-label">Action</span><div class="form-actions"><button class="btn accent" id="savePeriod">' + (isEditing ? 'Update' : 'Save') + '</button><button class="btn ghost" id="cancelPeriod">Cancel</button></div></td>';
       rows.appendChild(row);
+      document.getElementById('periodName').value = periodName;
+      document.getElementById('beginTime').value = beginTime;
+      document.getElementById('endTime').value = endTime;
+      document.getElementById('timezone').value = periodTimezone;
+      document.querySelectorAll('input[name="day"]').forEach(function (checkbox) {
+        checkbox.checked = periodDays.includes(checkbox.value);
+      });
       document.getElementById('savePeriod').addEventListener('click', savePeriod);
       document.getElementById('cancelPeriod').addEventListener('click', function () {
         adding = false;
+        editingPeriod = null;
         addButton.disabled = false;
         assignButton.disabled = dropdown.value === '__all__';
         render();
       });
       document.getElementById('periodName').focus();
+    }
+
+    function startEditing(period) {
+      editingPeriod = period;
+      adding = false;
+      assigning = false;
+      addButton.disabled = false;
+      assignButton.disabled = dropdown.value === '__all__';
+      render();
+      document.getElementById('beginTime').focus();
     }
 
     function renderAssignmentForm() {
@@ -321,6 +357,7 @@
       assignButton.disabled = !schedule || schedule === '__all__';
       adding = false;
       assigning = false;
+      editingPeriod = null;
       if (!schedule) {
         periods = [];
         document.getElementById('panelTitle').textContent = 'Schedule periods';
@@ -358,14 +395,21 @@
       const begin = document.getElementById('beginTime').value;
       const end = document.getElementById('endTime').value;
       if (!name || !selectedDays.length || !begin || !end) { toast('Enter a name, times, and at least one weekday.', true); return; }
-      if (periods.some(function (item) { return attributeValue(item.name, '') === name; })) { toast('This schedule already contains that period.', true); return; }
+      if (!editingPeriod && periods.some(function (item) { return attributeValue(item.name, '') === name; })) { toast('This schedule already contains that period.', true); return; }
       const showingAll = dropdown.value === '__all__';
       const payload = {period_name:name, selected_days:selectedDays, begin_time:begin, end_time:end, timezone:document.getElementById('timezone').value};
       if (!showingAll) payload.schedule_name = dropdown.value;
       document.getElementById('savePeriod').disabled = true;
-      request(showingAll ? '/db/create_period' : '/db/add_period', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
-        .then(function () { adding = false; toast(showingAll ? 'Unassigned period created' : 'Period added to ' + dropdown.value); loadPeriods(); })
-        .catch(function () { toast('Could not add the period', true); document.getElementById('savePeriod').disabled = false; });
+      const requestPath = editingPeriod ? '/db/update_period' : (showingAll ? '/db/create_period' : '/db/add_period');
+      request(requestPath, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)})
+        .then(function () {
+          const wasEditing = Boolean(editingPeriod);
+          adding = false;
+          editingPeriod = null;
+          toast(wasEditing ? 'Period updated' : (showingAll ? 'Unassigned period created' : 'Period added to ' + dropdown.value));
+          loadPeriods();
+        })
+        .catch(function () { toast(editingPeriod ? 'Could not update the period' : 'Could not add the period', true); document.getElementById('savePeriod').disabled = false; });
     }
 
     function removePeriod(name) {
@@ -424,6 +468,7 @@
       if (!dropdown.value || adding) return;
       adding = true;
       assigning = false;
+      editingPeriod = null;
       addButton.disabled = true;
       assignButton.disabled = dropdown.value === '__all__';
       render();
@@ -432,6 +477,7 @@
       if (!dropdown.value || dropdown.value === '__all__' || assigning) return;
       assigning = true;
       adding = false;
+      editingPeriod = null;
       assignButton.disabled = true;
       addButton.disabled = false;
       render();

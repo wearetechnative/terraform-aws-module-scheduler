@@ -2,7 +2,9 @@ def handler(event, context):
     import boto3
     import os
     import json
+    from datetime import datetime
     from botocore.exceptions import ClientError
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
     table_name=os.environ["TABLENAME"]
     path = event.get('rawPath')
     db = boto3.resource('dynamodb')
@@ -138,7 +140,8 @@ def handler(event, context):
                             "Placement", {}
                         ).get("AvailabilityZone", ""),
                         "private_ip": instance.get("PrivateIpAddress", ""),
-                        "schedule": tags.get("InstanceScheduler", "")
+                        "schedule": tags.get("InstanceScheduler", ""),
+                        "ignore_scheduler": tags.get("Ignore_scheduler", "")
                     })
         instances.sort(key=lambda item: (
             item["name"].lower(),
@@ -201,6 +204,72 @@ def handler(event, context):
         return json_response(
             200,
             {"message": "schedule removed", "instance_id": instance_id}
+        )
+
+    if path == '/instances/ignore':
+        request_body = event.get('body')
+        if request_body is None:
+            return json_response(400, {"message": "Instance data is required"})
+
+        request_body = json.loads(request_body)
+        instance_id = request_body.get("instance_id", "").strip()
+        ignore_until = request_body.get("ignore_until", "").strip()
+        timezone = request_body.get("timezone", "").strip()
+        if not instance_id:
+            return json_response(400, {"message": "An instance ID is required"})
+
+        ec2 = boto3.client('ec2')
+        try:
+            ec2.describe_instances(InstanceIds=[instance_id])
+        except ClientError as error:
+            if error.response["Error"]["Code"] in {
+                "InvalidInstanceID.NotFound",
+                "InvalidInstanceID.Malformed"
+            }:
+                return json_response(404, {"message": "Instance was not found"})
+            raise
+
+        if ignore_until or timezone:
+            if not ignore_until or not timezone:
+                return json_response(
+                    400,
+                    {"message": "Both an ignore time and timezone are required"}
+                )
+            try:
+                datetime.strptime(ignore_until, "%H:%M")
+                ZoneInfo(timezone)
+            except ValueError:
+                return json_response(
+                    400,
+                    {"message": "Ignore time must use 24-hour HH:MM format"}
+                )
+            except ZoneInfoNotFoundError:
+                return json_response(
+                    400,
+                    {"message": f'Unknown timezone "{timezone}"'}
+                )
+
+            tag_value = f"{ignore_until} {timezone}"
+            ec2.create_tags(
+                Resources=[instance_id],
+                Tags=[{"Key": "Ignore_scheduler", "Value": tag_value}]
+            )
+            return json_response(
+                200,
+                {
+                    "message": "scheduler override assigned",
+                    "instance_id": instance_id,
+                    "ignore_scheduler": tag_value
+                }
+            )
+
+        ec2.delete_tags(
+            Resources=[instance_id],
+            Tags=[{"Key": "Ignore_scheduler"}]
+        )
+        return json_response(
+            200,
+            {"message": "scheduler override removed", "instance_id": instance_id}
         )
 
     
@@ -377,6 +446,48 @@ def handler(event, context):
                 {"message": "period created", "period_name": period["period_name"]}
             )
         return json_response(400, {"message": "Period data is required"})
+
+    elif path == '/db/update_period':
+        period = event.get('body')
+        if period is None:
+            return json_response(400, {"message": "Period data is required"})
+
+        period = json.loads(period)
+        period_name = period.get("period_name", "").strip()
+        selected_days = period.get("selected_days", [])
+        begin_time = period.get("begin_time", "").strip()
+        end_time = period.get("end_time", "").strip()
+        timezone = period.get("timezone", "").strip()
+        if not all([
+            period_name,
+            selected_days,
+            begin_time,
+            end_time,
+            timezone
+        ]):
+            return json_response(
+                400,
+                {"message": "Name, days, times, and timezone are required"}
+            )
+
+        existing_period = dynamodb.get_item(
+            TableName=table_name,
+            Key={
+                "type": {"S": "period"},
+                "name": {"S": period_name}
+            }
+        )
+        if not existing_period.get("Item"):
+            return json_response(
+                404,
+                {"message": f'Period "{period_name}" was not found'}
+            )
+
+        save_period(period)
+        return json_response(
+            200,
+            {"message": "period updated", "period_name": period_name}
+        )
 
     elif path == '/db/delete_period_definition':
         delete_item = event.get('body')

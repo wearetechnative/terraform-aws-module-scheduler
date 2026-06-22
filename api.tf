@@ -103,6 +103,14 @@ resource "aws_lambda_permission" "allow_API_create_period" {
   source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/create_period"
 }
 
+resource "aws_lambda_permission" "allow_API_update_period" {
+  statement_id  = "AllowExecutionFromApigatewayUpdatePeriod"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/update_period"
+}
+
 resource "aws_lambda_permission" "allow_API_assign_period" {
   statement_id  = "AllowExecutionFromApigatewayAssignPeriod"
   action        = "lambda:InvokeFunction"
@@ -141,4 +149,12 @@ resource "aws_lambda_permission" "allow_API_instance_schedule" {
   function_name = module.webpage_lambda.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/instances/schedule"
+}
+
+resource "aws_lambda_permission" "allow_API_instance_ignore" {
+  statement_id  = "AllowExecutionFromApigatewayInstanceIgnore"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/instances/ignore"
 }

@@ -83,8 +83,8 @@ def handler(event, context):
                         return 'start'
                         
                     else:
-                        return('stop')
                         print('not starting')
+                        return('stop')
 
             else:
                 return('stop')

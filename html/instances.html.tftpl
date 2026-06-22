@@ -57,8 +57,21 @@
     .assignment { display:flex; align-items:center; gap:8px; min-width:285px; }
     .assignment select { width:190px; height:39px; padding:0 10px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); }
     .unmanaged { color:#8a6c2f; font-size:11px; font-weight:700; }
+    .override { display:flex; align-items:center; gap:8px; min-width:210px; }
+    .override-value { color:#806a28; font-size:11px; font-weight:700; }
     .state-message { padding:65px 20px; text-align:center; color:var(--muted); }
     .state-message strong { display:block; color:var(--ink); margin-bottom:5px; }
+    dialog { width:min(460px,calc(100% - 32px)); padding:0; border:0; border-radius:18px; color:var(--ink); box-shadow:0 24px 80px rgba(23,32,28,.25); }
+    dialog::backdrop { background:rgba(16,24,20,.55); backdrop-filter:blur(3px); }
+    .dialog-head { padding:22px 24px 17px; border-bottom:1px solid var(--line); }
+    .dialog-head h2 { margin:0 0 5px; font-size:20px; letter-spacing:-.03em; }
+    .dialog-head p { margin:0; color:var(--muted); font-size:13px; }
+    .dialog-body { display:grid; gap:17px; padding:22px 24px; }
+    .field label { display:block; margin-bottom:6px; font-size:12px; font-weight:750; }
+    .field input,.field select { width:100%; height:43px; padding:0 12px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); }
+    .dialog-actions { display:flex; justify-content:space-between; gap:9px; padding:17px 24px; border-top:1px solid var(--line); background:#fafbf9; }
+    .dialog-actions-right { display:flex; gap:9px; margin-left:auto; }
+    .btn.danger { color:var(--danger); background:#fff0f0; }
     .toast { position:fixed; right:24px; bottom:24px; max-width:380px; padding:13px 16px; border-radius:11px; background:var(--dark); color:#fff; box-shadow:0 15px 40px rgba(0,0,0,.18); transform:translateY(20px); opacity:0; pointer-events:none; transition:.2s ease; font-size:13px; font-weight:650; }
     .toast.show { transform:translateY(0); opacity:1; }
     .toast.error { background:#8d3030; }
@@ -97,19 +110,33 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Instance</th><th>State</th><th>Type</th><th>Location</th><th>Schedule assignment</th></tr></thead>
-            <tbody id="instanceRows"><tr><td colspan="5"><div class="state-message">Loading EC2 inventory…</div></td></tr></tbody>
+            <thead><tr><th>Instance</th><th>State</th><th>Type</th><th>Location</th><th>Schedule assignment</th><th>Ignore scheduler</th></tr></thead>
+            <tbody id="instanceRows"><tr><td colspan="6"><div class="state-message">Loading EC2 inventory…</div></td></tr></tbody>
           </table>
         </div>
       </section>
     </main>
   </div>
+  <dialog id="ignoreDialog">
+    <form id="ignoreForm">
+      <div class="dialog-head"><h2>Ignore scheduler</h2><p id="ignoreInstance">Keep this instance running until a specific local time.</p></div>
+      <div class="dialog-body">
+        <div class="field"><label for="ignoreTime">Ignore until</label><input id="ignoreTime" type="time" required></div>
+        <div class="field"><label for="ignoreTimezone">Timezone</label><select id="ignoreTimezone" required><option>Europe/Amsterdam</option><option>Europe/London</option><option>UTC</option><option>America/New_York</option><option>America/Los_Angeles</option><option>Asia/Kolkata</option><option>Asia/Singapore</option><option>Australia/Sydney</option></select></div>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn danger" type="button" id="removeIgnore">Remove override</button>
+        <div class="dialog-actions-right"><button class="btn ghost" type="button" id="cancelIgnore">Cancel</button><button class="btn" type="submit" id="saveIgnore">Save override</button></div>
+      </div>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status"></div>
   <script>
     const apiUrl = '${api_url}';
     const rows = document.getElementById('instanceRows');
     let instances = [];
     let schedules = [];
+    let selectedIgnoreInstance = null;
 
     function request(path, options) {
       return fetch(apiUrl + path, options).then(function (response) {
@@ -145,7 +172,7 @@
       rows.innerHTML = '';
       document.getElementById('resultCount').textContent = visible.length + (visible.length === 1 ? ' instance' : ' instances');
       if (!visible.length) {
-        rows.innerHTML = '<tr><td colspan="5"><div class="state-message"><strong>No instances found</strong>Try another search or check this AWS region.</div></td></tr>';
+        rows.innerHTML = '<tr><td colspan="6"><div class="state-message"><strong>No instances found</strong>Try another search or check this AWS region.</div></td></tr>';
         return;
       }
 
@@ -185,7 +212,18 @@
         assignment.appendChild(select); assignment.appendChild(save);
         assignmentCell.appendChild(assignment);
 
-        row.appendChild(identity); row.appendChild(stateCell); row.appendChild(type); row.appendChild(location); row.appendChild(assignmentCell);
+        const ignoreCell = document.createElement('td');
+        const ignore = document.createElement('div'); ignore.className = 'override';
+        const ignoreValue = document.createElement('span');
+        ignoreValue.className = instance.ignore_scheduler ? 'override-value' : 'unmanaged';
+        ignoreValue.textContent = instance.ignore_scheduler || 'No override';
+        const ignoreButton = document.createElement('button');
+        ignoreButton.className = 'btn ghost';
+        ignoreButton.textContent = instance.ignore_scheduler ? 'Edit' : 'Set';
+        ignoreButton.addEventListener('click', function () { openIgnoreDialog(instance); });
+        ignore.appendChild(ignoreValue); ignore.appendChild(ignoreButton); ignoreCell.appendChild(ignore);
+
+        row.appendChild(identity); row.appendChild(stateCell); row.appendChild(type); row.appendChild(location); row.appendChild(assignmentCell); row.appendChild(ignoreCell);
         rows.appendChild(row);
       });
     }
@@ -222,7 +260,7 @@
 
     function load() {
       document.getElementById('refreshButton').disabled = true;
-      rows.innerHTML = '<tr><td colspan="5"><div class="state-message">Loading EC2 inventory…</div></td></tr>';
+      rows.innerHTML = '<tr><td colspan="6"><div class="state-message">Loading EC2 inventory…</div></td></tr>';
       Promise.all([request('/instances'), request('/db')])
         .then(function (results) {
           instances = results[0].instances || [];
@@ -232,14 +270,54 @@
         })
         .catch(function (error) {
           console.error('EC2 inventory loading failed:', error);
-          rows.innerHTML = '<tr><td colspan="5"><div class="state-message"><strong>Could not load instances</strong>' + (error.message || 'Check EC2 permissions and API connectivity.') + '</div></td></tr>';
+          rows.innerHTML = '<tr><td colspan="6"><div class="state-message"><strong>Could not load instances</strong>' + (error.message || 'Check EC2 permissions and API connectivity.') + '</div></td></tr>';
           toast('Could not load instances', true);
         })
         .finally(function () { document.getElementById('refreshButton').disabled = false; });
     }
 
+    function openIgnoreDialog(instance) {
+      selectedIgnoreInstance = instance;
+      document.getElementById('ignoreInstance').textContent = (instance.name || instance.instance_id) + ' will remain running until this local time.';
+      const parts = (instance.ignore_scheduler || '').split(' ');
+      document.getElementById('ignoreTime').value = parts[0] && parts[0].includes(':') ? parts[0] : '';
+      document.getElementById('ignoreTimezone').value = parts.slice(1).join(' ') || 'Europe/Amsterdam';
+      document.getElementById('removeIgnore').style.visibility = instance.ignore_scheduler ? 'visible' : 'hidden';
+      document.getElementById('ignoreDialog').showModal();
+    }
+
+    function updateIgnore(ignoreUntil, timezone) {
+      if (!selectedIgnoreInstance) return;
+      const save = document.getElementById('saveIgnore');
+      save.disabled = true;
+      request('/instances/ignore', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({instance_id:selectedIgnoreInstance.instance_id, ignore_until:ignoreUntil, timezone:timezone})
+      })
+        .then(function (data) {
+          selectedIgnoreInstance.ignore_scheduler = data.ignore_scheduler || '';
+          document.getElementById('ignoreDialog').close();
+          toast(data.ignore_scheduler ? 'Scheduler override assigned' : 'Scheduler override removed');
+          render(document.getElementById('search').value);
+        })
+        .catch(function (error) {
+          console.error('Ignore scheduler update failed:', error);
+          toast(error.message || 'Could not update override', true);
+        })
+        .finally(function () { save.disabled = false; });
+    }
+
     document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
     document.getElementById('refreshButton').addEventListener('click', load);
+    document.getElementById('cancelIgnore').addEventListener('click', function () { document.getElementById('ignoreDialog').close(); });
+    document.getElementById('removeIgnore').addEventListener('click', function () {
+      if (window.confirm('Remove the Ignore_scheduler override from this instance?')) updateIgnore('', '');
+    });
+    document.getElementById('ignoreForm').addEventListener('submit', function (event) {
+      event.preventDefault();
+      updateIgnore(document.getElementById('ignoreTime').value, document.getElementById('ignoreTimezone').value);
+    });
     load();
   </script>
 </body>

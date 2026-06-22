@@ -61,7 +61,7 @@
     .btn-primary { background: var(--accent); color: var(--dark); }
     .btn-secondary { background: #2b3631; color: #fff; }
     .btn svg { width: 16px; }
-    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 22px 0; }
+    .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 22px 0; }
     .metric { padding: 22px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
     .metric-head { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
     .metric-icon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 9px; background: #f0f3ec; color: var(--ink); }
@@ -154,11 +154,6 @@
           <div class="metric-head"><span>Service status</span><span class="metric-icon">✓</span></div>
           <div class="metric-value" style="font-size:24px">Operational</div>
           <div class="metric-note">API is responding normally</div>
-        </article>
-        <article class="metric">
-          <div class="metric-head"><span>Execution</span><span class="metric-icon">↻</span></div>
-          <div class="metric-value" style="font-size:24px">Automatic</div>
-          <div class="metric-note">Managed through AWS EventBridge</div>
         </article>
       </section>
 
