@@ -155,9 +155,9 @@
         tokens = null;
       }
     }
-    if (!tokens || !tokens.id_token) return startLogin();
+    if (!tokens || !tokens.access_token || !tokens.id_token) return startLogin();
     addAccountControl(tokens);
-    return tokens.id_token;
+    return tokens.access_token;
   }
 
   window.schedulerLogout = function () {
@@ -183,7 +183,14 @@
       const headers = new Headers(authenticatedOptions.headers || {});
       headers.set('Authorization', 'Bearer ' + token);
       authenticatedOptions.headers = headers;
-      return originalFetch(input, authenticatedOptions);
+      return originalFetch(input, authenticatedOptions).then(function (response) {
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem(tokenKey);
+          startLogin();
+          return new Promise(function () {});
+        }
+        return response;
+      });
     });
   };
 })();
