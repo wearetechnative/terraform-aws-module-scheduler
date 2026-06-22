@@ -1,38 +1,58 @@
 variable "schedules" {
-    type = list(object({
-    name = string,
+  type = list(object({
+    name   = string,
     period = list(string)
-}))
-}
-
-variable "periods"{
-    type = list(object({
-    name = string,
-    days = list(string),
-    begintime = string,
-    endtime = string,
-    timezone = string
   }))
 }
 
-variable "sqs_arn"{
-    type = string
-    
-}
-variable "kms_key_arn"{
-    type = string
+variable "periods" {
+  type = list(object({
+    name      = string,
+    days      = list(string),
+    begintime = string,
+    endtime   = string,
+    timezone  = string
+  }))
 }
 
-variable "bucket_name"{
+variable "sqs_arn" {
+  type = string
+
+}
+variable "kms_key_arn" {
   type = string
 }
 
-variable "dynamodb_table_name"{
-    type = string
+variable "bucket_name" {
+  type = string
 }
 
-variable "lambda_role_name"{
-    type = string
-    description = "name for lambda role which will be created by this module"
-    
+variable "dynamodb_table_name" {
+  type = string
+}
+
+variable "lambda_role_name" {
+  type        = string
+  description = "name for lambda role which will be created by this module"
+
+}
+
+variable "route53_zone_name" {
+  description = "Public Route 53 hosted zone to create, for example example.com"
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.route53_zone_name)) > 0
+    error_message = "route53_zone_name must not be empty."
+  }
+}
+
+variable "frontend_fqdn" {
+  description = "Fully qualified domain name for the scheduler frontend, for example scheduler.example.com"
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.frontend_fqdn)) > 0 && !startswith(var.frontend_fqdn, "http")
+    error_message = "frontend_fqdn must be a hostname without http:// or https://."
+  }
 }

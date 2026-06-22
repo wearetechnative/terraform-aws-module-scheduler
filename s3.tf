@@ -16,22 +16,28 @@ resource "aws_s3_bucket_public_access_block" "webpage_bucket" {
 
   block_public_acls       = true
   ignore_public_acls      = true
-  block_public_policy     = false
-  restrict_public_buckets = false
+  block_public_policy     = true
+  restrict_public_buckets = true
 }
 
 data "aws_iam_policy_document" "webpage_bucket" {
   statement {
-    sid    = "PublicReadWebsiteObjects"
+    sid    = "AllowCloudFrontReadOnly"
     effect = "Allow"
 
     principals {
-      type        = "*"
-      identifiers = ["*"]
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
     }
 
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.webpage_bucket.arn}/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.webpage.arn]
+    }
   }
 }
 
@@ -90,14 +96,17 @@ resource "aws_s3_bucket_object" "technative_logo" {
   etag         = filemd5("${path.module}/technativelogo.svg")
 }
 
-resource "aws_s3_bucket_website_configuration" "website_conf" {
+resource "aws_s3_bucket_object" "auth" {
   bucket = aws_s3_bucket.webpage_bucket.id
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "index.html"
-  }
+  key    = "auth.js"
+  content = templatefile("${path.module}/html/auth.js.tftpl", {
+    api_url         = aws_apigatewayv2_api.my_api.api_endpoint
+    application_url = local.application_url
+    callback_url    = local.callback_url
+    client_id       = aws_cognito_user_pool_client.scheduler.id
+    cognito_domain  = "https://${aws_cognito_user_pool_domain.scheduler.domain}.auth.${data.aws_region.current.name}.amazoncognito.com"
+  })
+  content_type  = "application/javascript"
+  cache_control = "no-store"
+  etag          = filemd5("${path.module}/html/auth.js.tftpl")
 }

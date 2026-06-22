@@ -1,0 +1,189 @@
+(function () {
+  'use strict';
+
+  const config = {
+    apiUrl: '${api_url}',
+    applicationUrl: '${application_url}',
+    clientId: '${client_id}',
+    cognitoDomain: '${cognito_domain}',
+    callbackUrl: '${callback_url}'
+  };
+  const originalFetch = window.fetch.bind(window);
+  const tokenKey = 'scheduler_auth_tokens';
+  const verifierKey = 'scheduler_pkce_verifier';
+  const stateKey = 'scheduler_oauth_state';
+  const returnKey = 'scheduler_return_path';
+
+  function randomString(length) {
+    const values = new Uint8Array(length);
+    crypto.getRandomValues(values);
+    return Array.from(values, function (value) {
+      return 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'[value % 66];
+    }).join('');
+  }
+
+  function base64Url(buffer) {
+    return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
+
+  async function createChallenge(verifier) {
+    return base64Url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  }
+
+  function readTokens() {
+    try {
+      return JSON.parse(sessionStorage.getItem(tokenKey) || 'null');
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveTokens(tokens) {
+    tokens.expires_at = Date.now() + (Number(tokens.expires_in || 3600) * 1000);
+    sessionStorage.setItem(tokenKey, JSON.stringify(tokens));
+  }
+
+  async function tokenRequest(parameters) {
+    const response = await originalFetch(config.cognitoDomain + '/oauth2/token', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams(parameters).toString()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error_description || data.error || 'Authentication failed');
+    return data;
+  }
+
+  async function startLogin() {
+    const verifier = randomString(64);
+    const state = randomString(32);
+    sessionStorage.setItem(verifierKey, verifier);
+    sessionStorage.setItem(stateKey, state);
+    if (!window.location.search.includes('code=')) {
+      sessionStorage.setItem(returnKey, window.location.pathname + window.location.search);
+    }
+    const parameters = new URLSearchParams({
+      response_type: 'code',
+      client_id: config.clientId,
+      redirect_uri: config.callbackUrl,
+      scope: 'openid email profile',
+      state: state,
+      code_challenge_method: 'S256',
+      code_challenge: await createChallenge(verifier)
+    });
+    window.location.replace(config.cognitoDomain + '/oauth2/authorize?' + parameters.toString());
+    return new Promise(function () {});
+  }
+
+  async function refreshTokens(tokens) {
+    if (!tokens || !tokens.refresh_token) return null;
+    const refreshed = await tokenRequest({
+      grant_type: 'refresh_token',
+      client_id: config.clientId,
+      refresh_token: tokens.refresh_token
+    });
+    refreshed.refresh_token = tokens.refresh_token;
+    saveTokens(refreshed);
+    return refreshed;
+  }
+
+  function addAccountControl(tokens) {
+    document.addEventListener('DOMContentLoaded', function () {
+      const sidebar = document.querySelector('.sidebar');
+      if (!sidebar || document.getElementById('schedulerLogout')) return;
+      let encodedClaims = tokens.id_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      encodedClaims += '='.repeat((4 - encodedClaims.length % 4) % 4);
+      const claims = JSON.parse(atob(encodedClaims));
+      const control = document.createElement('div');
+      control.style.cssText = 'margin-top:12px;padding:12px;border:1px solid #31566a;border-radius:12px;color:#a9bbc5;font-size:11px;overflow:hidden';
+      const identity = document.createElement('div');
+      identity.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px;color:#fff';
+      identity.textContent = claims.email || claims['cognito:username'] || 'Signed in';
+      const logout = document.createElement('button');
+      logout.id = 'schedulerLogout';
+      logout.type = 'button';
+      logout.textContent = 'Sign out';
+      logout.style.cssText = 'width:100%;padding:7px;border:0;border-radius:7px;background:#21485d;color:#fff;cursor:pointer;font:inherit;font-weight:700';
+      logout.addEventListener('click', window.schedulerLogout);
+      control.appendChild(identity);
+      control.appendChild(logout);
+      sidebar.appendChild(control);
+    });
+  }
+
+  async function initialize() {
+    if (window.location.protocol !== 'https:' || window.location.hostname !== new URL(config.applicationUrl).hostname) {
+      window.location.replace(config.applicationUrl + window.location.pathname + window.location.search);
+      return new Promise(function () {});
+    }
+
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('error')) throw new Error(query.get('error_description') || query.get('error'));
+
+    if (query.get('code')) {
+      if (query.get('state') !== sessionStorage.getItem(stateKey)) throw new Error('Invalid authentication state');
+      const verifier = sessionStorage.getItem(verifierKey);
+      if (!verifier) throw new Error('Missing PKCE verifier');
+      const tokens = await tokenRequest({
+        grant_type: 'authorization_code',
+        client_id: config.clientId,
+        code: query.get('code'),
+        redirect_uri: config.callbackUrl,
+        code_verifier: verifier
+      });
+      saveTokens(tokens);
+      sessionStorage.removeItem(verifierKey);
+      sessionStorage.removeItem(stateKey);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      const returnPath = sessionStorage.getItem(returnKey);
+      sessionStorage.removeItem(returnKey);
+      if (returnPath && returnPath !== window.location.pathname) {
+        window.location.replace(returnPath);
+        return new Promise(function () {});
+      }
+    }
+
+    let tokens = readTokens();
+    if (tokens && tokens.expires_at <= Date.now() + 60000) {
+      try {
+        tokens = await refreshTokens(tokens);
+      } catch (error) {
+        sessionStorage.removeItem(tokenKey);
+        tokens = null;
+      }
+    }
+    if (!tokens || !tokens.id_token) return startLogin();
+    addAccountControl(tokens);
+    return tokens.id_token;
+  }
+
+  window.schedulerLogout = function () {
+    sessionStorage.clear();
+    const parameters = new URLSearchParams({
+      client_id: config.clientId,
+      logout_uri: config.callbackUrl
+    });
+    window.location.replace(config.cognitoDomain + '/logout?' + parameters.toString());
+  };
+
+  window.schedulerAuthReady = initialize().catch(function (error) {
+    console.error('Authentication failed:', error);
+    sessionStorage.clear();
+    return startLogin();
+  });
+
+  window.fetch = function (input, options) {
+    const url = typeof input === 'string' ? input : input.url;
+    if (!url.startsWith(config.apiUrl)) return originalFetch(input, options);
+    return window.schedulerAuthReady.then(function (token) {
+      const authenticatedOptions = Object.assign({}, options || {});
+      const headers = new Headers(authenticatedOptions.headers || {});
+      headers.set('Authorization', 'Bearer ' + token);
+      authenticatedOptions.headers = headers;
+      return originalFetch(input, authenticatedOptions);
+    });
+  };
+})();

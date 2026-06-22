@@ -50,9 +50,24 @@ See [pre-commit installation](https://pre-commit.com/#install) on how to install
 To use this module ...
 
 ```hcl
+provider "aws" {
+  region = "eu-west-1"
+}
+
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 module "scheduler"{
     source = "git@github.com:wearetechnative/terraform-aws-lambda.git"
+    providers = {
+      aws           = aws
+      aws.us_east_1 = aws.us_east_1
+    }
     bucket_name = "instancescheduler-bucket-example"
+    route53_zone_name = "example.com"
+    frontend_fqdn = "scheduler.example.com"
     dynamodb_table_name = "instance_scheduler"
     kms_key_arn = *******
     lambda_role_name = "scheduler_role"
