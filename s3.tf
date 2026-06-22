@@ -96,6 +96,15 @@ resource "aws_s3_bucket_object" "technative_logo" {
   etag         = filemd5("${path.module}/technativelogo.svg")
 }
 
+resource "aws_s3_bucket_object" "favicon" {
+  bucket        = aws_s3_bucket.webpage_bucket.id
+  key           = "favicon.svg"
+  source        = "${path.module}/favicon.svg"
+  content_type  = "image/svg+xml"
+  cache_control = "public, max-age=86400"
+  etag          = filemd5("${path.module}/favicon.svg")
+}
+
 resource "aws_s3_bucket_object" "auth" {
   bucket = aws_s3_bucket.webpage_bucket.id
   key    = "auth.js"
