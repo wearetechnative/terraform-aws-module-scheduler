@@ -53,7 +53,7 @@ variable "route53_zone_name" {
   nullable    = true
 
   validation {
-    condition     = var.route53_zone_name == null || length(trimspace(var.route53_zone_name)) > 0
+    condition     = var.route53_zone_name == null ? true : length(trimspace(var.route53_zone_name)) > 0
     error_message = "route53_zone_name must be null or a non-empty domain name."
   }
 }
@@ -65,7 +65,7 @@ variable "route53_zone_id" {
   nullable    = true
 
   validation {
-    condition     = var.route53_zone_id == null || length(trimspace(var.route53_zone_id)) > 0
+    condition     = var.route53_zone_id == null ? true : length(trimspace(var.route53_zone_id)) > 0
     error_message = "route53_zone_id must be null or a non-empty hosted zone ID."
   }
 }
