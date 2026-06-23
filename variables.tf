@@ -1,11 +1,19 @@
 variable "schedules" {
+  description = "Schedules to create during deployment. Omit to manage schedules entirely through the frontend."
   type = list(object({
     name   = string,
     period = list(string)
   }))
+  default = []
+
+  validation {
+    condition     = alltrue([for schedule in var.schedules : length(schedule.period) > 0])
+    error_message = "Every predefined schedule must contain at least one period."
+  }
 }
 
 variable "periods" {
+  description = "Periods to create during deployment. Omit to manage periods entirely through the frontend."
   type = list(object({
     name      = string,
     days      = list(string),
@@ -13,6 +21,7 @@ variable "periods" {
     endtime   = string,
     timezone  = string
   }))
+  default = []
 }
 
 variable "sqs_arn" {

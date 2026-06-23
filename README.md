@@ -101,6 +101,10 @@ module "scheduler"{
 }
 ```
 
+The `periods` and `schedules` inputs are optional. When both are omitted,
+deploy the module and create a period through the frontend first, followed by
+a schedule that uses that period.
+
 By default, the module creates the public hosted zone configured by
 `route53_zone_name`. To use an existing public Route 53 hosted zone instead,
 provide its ID and omit `route53_zone_name`:
