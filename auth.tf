@@ -3,8 +3,11 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 locals {
-  route53_zone_name = trimsuffix(lower(trimspace(var.route53_zone_name)), ".")
+  route53_zone_name = var.route53_zone_name == null ? null : trimsuffix(lower(trimspace(var.route53_zone_name)), ".")
   frontend_fqdn     = trimsuffix(lower(trimspace(var.frontend_fqdn)), ".")
+  route53_zone_id = var.route53_zone_id != null ? trimspace(var.route53_zone_id) : (
+    length(aws_route53_zone.scheduler) > 0 ? aws_route53_zone.scheduler[0].zone_id : null
+  )
   cognito_domain_prefix = substr(
     "${replace(lower(var.bucket_name), ".", "-")}-${data.aws_caller_identity.current.account_id}",
     0,
@@ -15,7 +18,20 @@ locals {
 }
 
 resource "aws_route53_zone" "scheduler" {
-  name = local.route53_zone_name
+  count = var.route53_zone_id == null ? 1 : 0
+  name  = local.route53_zone_name
+
+  lifecycle {
+    precondition {
+      condition     = var.route53_zone_id != null || local.route53_zone_name != null
+      error_message = "Set either route53_zone_id to reuse an existing hosted zone or route53_zone_name to create one."
+    }
+  }
+}
+
+moved {
+  from = aws_route53_zone.scheduler
+  to   = aws_route53_zone.scheduler[0]
 }
 
 resource "aws_acm_certificate" "scheduler" {
@@ -38,7 +54,7 @@ resource "aws_route53_record" "certificate_validation" {
     }
   }
 
-  zone_id = aws_route53_zone.scheduler.zone_id
+  zone_id = local.route53_zone_id
   name    = each.value.name
   type    = each.value.type
   records = [each.value.record]
@@ -252,7 +268,7 @@ resource "aws_cloudfront_origin_request_policy" "api" {
 }
 
 resource "aws_route53_record" "frontend_ipv4" {
-  zone_id = aws_route53_zone.scheduler.zone_id
+  zone_id = local.route53_zone_id
   name    = local.frontend_fqdn
   type    = "A"
 
@@ -264,7 +280,7 @@ resource "aws_route53_record" "frontend_ipv4" {
 }
 
 resource "aws_route53_record" "frontend_ipv6" {
-  zone_id = aws_route53_zone.scheduler.zone_id
+  zone_id = local.route53_zone_id
   name    = local.frontend_fqdn
   type    = "AAAA"
 

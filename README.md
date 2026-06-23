@@ -101,6 +101,18 @@ module "scheduler"{
 }
 ```
 
+By default, the module creates the public hosted zone configured by
+`route53_zone_name`. To use an existing public Route 53 hosted zone instead,
+provide its ID and omit `route53_zone_name`:
+
+```hcl
+module "scheduler" {
+  # ...
+  route53_zone_id = "Z0123456789EXAMPLE"
+  frontend_fqdn   = "scheduler.example.com"
+}
+```
+
 <!-- BEGIN_TF_DOCS -->
 ## Ignore Scheduler functionality
 

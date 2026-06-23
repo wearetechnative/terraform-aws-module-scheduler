@@ -38,12 +38,26 @@ variable "lambda_role_name" {
 }
 
 variable "route53_zone_name" {
-  description = "Public Route 53 hosted zone to create, for example example.com"
+  description = "Public Route 53 hosted zone to create when route53_zone_id is not provided, for example example.com"
   type        = string
+  default     = null
+  nullable    = true
 
   validation {
-    condition     = length(trimspace(var.route53_zone_name)) > 0
-    error_message = "route53_zone_name must not be empty."
+    condition     = var.route53_zone_name == null || length(trimspace(var.route53_zone_name)) > 0
+    error_message = "route53_zone_name must be null or a non-empty domain name."
+  }
+}
+
+variable "route53_zone_id" {
+  description = "ID of an existing public Route 53 hosted zone to reuse. When set, the module does not create a hosted zone."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.route53_zone_id == null || length(trimspace(var.route53_zone_id)) > 0
+    error_message = "route53_zone_id must be null or a non-empty hosted zone ID."
   }
 }
 

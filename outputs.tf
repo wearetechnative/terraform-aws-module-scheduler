@@ -29,13 +29,13 @@ output "cognito_login_domain" {
 }
 
 output "route53_zone_id" {
-  description = "ID of the created public Route 53 hosted zone"
-  value       = aws_route53_zone.scheduler.zone_id
+  description = "ID of the public Route 53 hosted zone used by the scheduler"
+  value       = local.route53_zone_id
 }
 
 output "route53_name_servers" {
-  description = "Authoritative name servers; configure these at the domain registrar"
-  value       = aws_route53_zone.scheduler.name_servers
+  description = "Authoritative name servers when the hosted zone is created by this module; empty when using an existing zone"
+  value       = length(aws_route53_zone.scheduler) > 0 ? tolist(aws_route53_zone.scheduler[0].name_servers) : []
 }
 
 output "frontend_fqdn" {
