@@ -122,6 +122,7 @@
     const rows = document.getElementById('periodRows');
     const addButton = document.getElementById('addButton');
     const assignButton = document.getElementById('assignButton');
+    const weekdayOrder = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
     let periods = [];
     let adding = false;
     let assigning = false;
@@ -160,6 +161,15 @@
       });
     }
 
+    function orderedDays(days) {
+      return days.slice().sort(function (left, right) {
+        const leftIndex = weekdayOrder.indexOf(left.toLowerCase());
+        const rightIndex = weekdayOrder.indexOf(right.toLowerCase());
+        return (leftIndex === -1 ? weekdayOrder.length : leftIndex) -
+          (rightIndex === -1 ? weekdayOrder.length : rightIndex);
+      });
+    }
+
     function render() {
       const showingAll = dropdown.value === '__all__';
       rows.innerHTML = '';
@@ -170,7 +180,7 @@
       }
       periods.forEach(function (period) {
         const periodName = attributeValue(period.name, '');
-        const periodDays = attributeValue(period.days, []);
+        const periodDays = orderedDays(attributeValue(period.days, []));
         const beginTime = attributeValue(period.begintime, '');
         const endTime = attributeValue(period.endtime, '');
         const periodTimezone = attributeValue(period.timezone, '');
@@ -251,7 +261,7 @@
       row.innerHTML =
         '<td><label class="field-label" for="periodName">Name</label><input id="periodName" placeholder="office-hours"' + (isEditing ? ' disabled' : '') + '></td>' +
         '<td><span class="field-label">Weekdays</span><div class="day-picker">' +
-        ['mon','tue','wed','thu','fri','sat','sun'].map(function (day) { return '<label><input type="checkbox" name="day" value="' + day + '"><span>' + day + '</span></label>'; }).join('') +
+        weekdayOrder.map(function (day) { return '<label><input type="checkbox" name="day" value="' + day + '"><span>' + day + '</span></label>'; }).join('') +
         '</div></td>' +
         '<td><label class="field-label" for="beginTime">Start time</label><input id="beginTime" type="time"></td>' +
         '<td><label class="field-label" for="endTime">Stop time</label><input id="endTime" type="time"></td>' +
