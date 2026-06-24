@@ -71,20 +71,25 @@
     .calendar-wrap { display:none; overflow-x:auto; }
     .calendar-wrap.active { display:block; }
     .table-wrap.hidden { display:none; }
-    .calendar-grid { min-width:1050px; display:grid; grid-template-columns:220px repeat(7,minmax(115px,1fr)); }
+    .calendar-grid { min-width:1120px; display:grid; grid-template-columns:220px minmax(900px,1fr); }
     .calendar-head { padding:13px 12px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); border-right:1px solid var(--line); font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
     .calendar-head:last-child { border-right:0; }
-    .calendar-instance { min-height:104px; padding:15px 16px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); background:#fcfdfb; }
+    .week-axis { display:grid; grid-template-columns:repeat(7,1fr); padding:0; }
+    .week-axis span { padding:13px 8px; border-right:1px solid var(--line); text-align:center; }
+    .week-axis span:last-child { border-right:0; }
+    .calendar-instance { min-height:82px; padding:15px 16px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); background:#fcfdfb; }
     .calendar-instance strong { display:block; margin-bottom:3px; }
     .calendar-schedule { color:var(--muted); font-size:11px; }
     .calendar-ignore { display:inline-block; margin-top:8px; padding:3px 6px; border-radius:6px; color:#806a28; background:#f8f3dd; font-size:10px; font-weight:700; }
-    .calendar-day { min-height:104px; padding:10px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); background:#fff; }
-    .calendar-day:nth-child(8n) { border-right:0; }
-    .calendar-period { margin-bottom:6px; padding:7px 8px; border-left:3px solid var(--accent); border-radius:7px; color:#31566a; background:#edf8fa; font-size:11px; line-height:1.35; }
-    .calendar-period:last-child { margin-bottom:0; }
-    .calendar-period.stop-only { border-left-color:#d2ad54; color:#806a28; background:#fff9eb; }
-    .calendar-period strong { display:block; color:inherit; font-size:11px; }
-    .calendar-empty { color:#a2adb2; font-size:11px; }
+    .week-track { position:relative; min-height:82px; border-bottom:1px solid var(--line); background-color:#fff; background-image:linear-gradient(to right,transparent calc(100% - 1px),var(--line) calc(100% - 1px)); background-size:calc(100% / 7) 100%; overflow:hidden; }
+    .timeline-bar { position:absolute; height:22px; min-width:3px; padding:3px 7px; overflow:hidden; border-radius:6px; color:#173f51; background:var(--accent); font-size:10px; font-weight:750; line-height:16px; white-space:nowrap; text-overflow:ellipsis; box-shadow:inset 0 0 0 1px rgba(17,47,65,.08); }
+    .timeline-stop { position:absolute; width:2px; height:26px; background:#c49427; }
+    .timeline-stop::before { content:""; position:absolute; left:-4px; top:-1px; width:10px; height:10px; border-radius:50%; background:#c49427; }
+    .timeline-stop-label { position:absolute; top:12px; left:6px; padding:2px 5px; border-radius:5px; color:#806a28; background:#fff4d7; font-size:9px; font-weight:750; white-space:nowrap; }
+    .calendar-legend { display:flex; gap:16px; align-items:center; padding:11px 16px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
+    .calendar-legend span { display:inline-flex; align-items:center; gap:6px; }
+    .legend-run,.legend-stop { display:inline-block; width:22px; height:8px; border-radius:4px; background:var(--accent); }
+    .legend-stop { width:2px; height:16px; border-radius:0; background:#c49427; }
     dialog { width:min(460px,calc(100% - 32px)); padding:0; border:0; border-radius:18px; color:var(--ink); box-shadow:0 24px 80px rgba(23,32,28,.25); }
     dialog::backdrop { background:rgba(16,24,20,.55); backdrop-filter:blur(3px); }
     .dialog-head { padding:22px 24px 17px; border-bottom:1px solid var(--line); }
@@ -146,6 +151,7 @@
         </div>
         <div class="calendar-wrap" id="calendarWrap">
           <div class="calendar-grid" id="calendarGrid"></div>
+          <div class="calendar-legend"><span><i class="legend-run"></i>Scheduled running window</span><span><i class="legend-stop"></i>Stop-only time</span></div>
         </div>
       </section>
     </main>
@@ -301,12 +307,14 @@
       corner.className = 'calendar-head';
       corner.textContent = 'Instance';
       calendarGrid.appendChild(corner);
+      const axis = document.createElement('div');
+      axis.className = 'calendar-head week-axis';
       weekdays.forEach(function (day) {
-        const header = document.createElement('div');
-        header.className = 'calendar-head';
+        const header = document.createElement('span');
         header.textContent = day.label;
-        calendarGrid.appendChild(header);
+        axis.appendChild(header);
       });
+      calendarGrid.appendChild(axis);
 
       const managed = visible.filter(function (instance) { return instance.schedule; });
       if (!managed.length) {
@@ -336,35 +344,60 @@
         }
         calendarGrid.appendChild(identity);
 
-        weekdays.forEach(function (day) {
-          const cell = document.createElement('div');
-          cell.className = 'calendar-day';
-          const periods = (schedulePeriods[instance.schedule] || []).filter(function (period) {
-            return period.days.includes(day.key);
+        const track = document.createElement('div');
+        track.className = 'week-track';
+        const windows = [];
+        const periodsForSchedule = schedulePeriods[instance.schedule] || [];
+        weekdays.forEach(function (day, dayIndex) {
+          periodsForSchedule.forEach(function (period, periodIndex) {
+            if (period.days.includes(day.key)) {
+              windows.push({
+                dayIndex:dayIndex,
+                lane:periodIndex,
+                period:period
+              });
+            }
           });
-          if (!periods.length) {
-            cell.innerHTML = '<span class="calendar-empty">No window</span>';
-          } else {
-            periods.forEach(function (period) {
-              const block = document.createElement('div');
-              block.className = 'calendar-period' + (period.begin ? '' : ' stop-only');
-              const name = document.createElement('strong');
-              name.textContent = period.name;
-              const time = document.createElement('span');
-              time.textContent = period.begin
-                ? period.begin + '–' + period.end
-                : 'Stop at ' + period.end;
-              const zone = document.createElement('div');
-              zone.textContent = period.timezone;
-              block.appendChild(name);
-              block.appendChild(time);
-              block.appendChild(zone);
-              cell.appendChild(block);
-            });
-          }
-          calendarGrid.appendChild(cell);
         });
+        const trackHeight = Math.max(82, 20 + periodsForSchedule.length * 25);
+        track.style.minHeight = trackHeight + 'px';
+        identity.style.minHeight = trackHeight + 'px';
+        windows.forEach(function (windowItem) {
+          const period = windowItem.period;
+          const dayStart = windowItem.dayIndex * 1440;
+          const endMinutes = timeToMinutes(period.end);
+          const top = 10 + windowItem.lane * 25;
+          if (period.begin) {
+            const beginMinutes = timeToMinutes(period.begin);
+            const duration = Math.max(1, endMinutes - beginMinutes);
+            const bar = document.createElement('div');
+            bar.className = 'timeline-bar';
+            bar.style.left = ((dayStart + beginMinutes) / 10080 * 100) + '%';
+            bar.style.width = (duration / 10080 * 100) + '%';
+            bar.style.top = top + 'px';
+            bar.textContent = period.name + ' · ' + period.begin + '–' + period.end;
+            bar.title = period.name + ': ' + period.begin + '–' + period.end + ' (' + period.timezone + ')';
+            track.appendChild(bar);
+          } else {
+            const marker = document.createElement('div');
+            marker.className = 'timeline-stop';
+            marker.style.left = ((dayStart + endMinutes) / 10080 * 100) + '%';
+            marker.style.top = top + 'px';
+            marker.title = period.name + ': stop at ' + period.end + ' (' + period.timezone + ')';
+            const label = document.createElement('span');
+            label.className = 'timeline-stop-label';
+            label.textContent = period.name + ' · ' + period.end;
+            marker.appendChild(label);
+            track.appendChild(marker);
+          }
+        });
+        calendarGrid.appendChild(track);
       });
+    }
+
+    function timeToMinutes(value) {
+      const parts = (value || '00:00').split(':');
+      return (Number(parts[0]) * 60) + Number(parts[1]);
     }
 
     function setView(view) {

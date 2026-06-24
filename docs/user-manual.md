@@ -263,9 +263,10 @@ switch views.
 The Calendar view shows:
 
 - One row for each instance with an assigned schedule.
-- Monday through Sunday as columns.
-- Each period name, start and stop time, and timezone.
-- Stop-only periods as **Stop at HH:MM**.
+- A horizontal Monday-through-Sunday timeline.
+- Operating windows as bars positioned by weekday and time.
+- Stop-only periods as vertical stop markers.
+- Period details and timezone when hovering over a bar or marker.
 - Active ignore overrides next to the instance.
 
 The search field filters both views. Schedule assignments and ignore overrides
