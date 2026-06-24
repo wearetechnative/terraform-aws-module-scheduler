@@ -33,6 +33,9 @@
     .btn.accent { background:var(--accent); color:var(--dark); }
     .btn.ghost { background:#eef1ec; color:var(--ink); }
     .btn:disabled { cursor:not-allowed; opacity:.5; }
+    .btn.table-action { min-height:40px; padding:0 15px; border-radius:9px; color:var(--muted); background:#f2f4f0; }
+    .btn.danger { min-height:40px; padding:0 15px; border-radius:9px; color:#a93838; background:#fff0f0; }
+    .btn.danger:disabled { opacity:.45; }
     .top-actions { display:flex; gap:9px; }
     .summary { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:20px; }
     .summary-card { padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; }
@@ -58,12 +61,9 @@
     .status::before { content:""; width:6px; height:6px; border-radius:50%; background:#4ba979; }
     .status.in-use { color:#806a28; background:#f8f3dd; }
     .status.in-use::before { background:#c49a31; }
-    .actions { display:flex; align-items:center; gap:8px; }
+    .actions { display:flex; align-items:center; gap:7px; }
     .action { padding:7px 9px; border:0; border-radius:8px; background:transparent; color:#59645e; font:inherit; font-weight:700; font-size:12px; cursor:pointer; }
     .action:hover { background:#eef1ec; }
-    .action.danger { color:var(--danger); }
-    .action:disabled { color:#9ba7ad; cursor:not-allowed; }
-    .action:disabled:hover { background:transparent; }
     .state { padding:60px 20px; text-align:center; color:var(--muted); }
     .state strong { display:block; color:var(--ink); margin-bottom:5px; }
     .skeleton td div { height:30px; border-radius:8px; background:linear-gradient(90deg,#f1f3f0 25%,#fafbfa 37%,#f1f3f0 63%); background-size:400% 100%; animation:shimmer 1.4s infinite; }
@@ -219,11 +219,11 @@
         const actions = document.createElement('div');
         actions.className = 'actions';
         const link = document.createElement('a');
-        link.className = 'action';
+        link.className = 'btn table-action';
         link.href = 'periods.html?schedule=' + encodeURIComponent(item.name);
-        link.textContent = 'Open →';
+        link.textContent = 'Open';
         const deleteButton = document.createElement('button');
-        deleteButton.className = 'action danger';
+        deleteButton.className = 'btn danger';
         deleteButton.type = 'button';
         deleteButton.textContent = 'Delete';
         deleteButton.disabled = item.instances.length > 0;
