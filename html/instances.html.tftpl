@@ -33,6 +33,10 @@
     .btn { min-height:40px; padding:0 14px; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:9px; background:var(--dark); color:#fff; cursor:pointer; font-weight:700; }
     .btn:disabled { cursor:not-allowed; opacity:.5; }
     .btn.ghost { color:var(--muted); background:#eef1ec; }
+    .top-actions { display:flex; align-items:center; gap:9px; }
+    .view-toggle { display:flex; gap:4px; padding:4px; border:1px solid var(--line); border-radius:11px; background:#fff; }
+    .view-toggle button { min-height:32px; padding:0 11px; border:0; border-radius:7px; color:var(--muted); background:transparent; cursor:pointer; font-weight:700; font-size:12px; }
+    .view-toggle button.active { color:#fff; background:var(--dark); }
     .summary { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
     .summary-card { padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; }
     .summary-card span { color:var(--muted); font-size:12px; font-weight:650; }
@@ -44,6 +48,7 @@
     .search input { width:100%; height:41px; padding:0 12px 0 38px; border:1px solid var(--line); border-radius:9px; background:#fafbf9; outline:none; }
     .search input:focus,select:focus { border-color:#9aa68f; box-shadow:0 0 0 3px #edf2e4; outline:none; }
     .count { color:var(--muted); font-size:12px; font-weight:650; }
+    .toolbar-meta { display:flex; align-items:center; gap:14px; }
     table { width:100%; border-collapse:collapse; }
     th { padding:13px 18px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     td { padding:15px 18px; border-bottom:1px solid var(--line); vertical-align:middle; }
@@ -63,6 +68,23 @@
     .override-value { color:#806a28; font-size:11px; font-weight:700; }
     .state-message { padding:65px 20px; text-align:center; color:var(--muted); }
     .state-message strong { display:block; color:var(--ink); margin-bottom:5px; }
+    .calendar-wrap { display:none; overflow-x:auto; }
+    .calendar-wrap.active { display:block; }
+    .table-wrap.hidden { display:none; }
+    .calendar-grid { min-width:1050px; display:grid; grid-template-columns:220px repeat(7,minmax(115px,1fr)); }
+    .calendar-head { padding:13px 12px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); border-right:1px solid var(--line); font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
+    .calendar-head:last-child { border-right:0; }
+    .calendar-instance { min-height:104px; padding:15px 16px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); background:#fcfdfb; }
+    .calendar-instance strong { display:block; margin-bottom:3px; }
+    .calendar-schedule { color:var(--muted); font-size:11px; }
+    .calendar-ignore { display:inline-block; margin-top:8px; padding:3px 6px; border-radius:6px; color:#806a28; background:#f8f3dd; font-size:10px; font-weight:700; }
+    .calendar-day { min-height:104px; padding:10px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); background:#fff; }
+    .calendar-day:nth-child(8n) { border-right:0; }
+    .calendar-period { margin-bottom:6px; padding:7px 8px; border-left:3px solid var(--accent); border-radius:7px; color:#31566a; background:#edf8fa; font-size:11px; line-height:1.35; }
+    .calendar-period:last-child { margin-bottom:0; }
+    .calendar-period.stop-only { border-left-color:#d2ad54; color:#806a28; background:#fff9eb; }
+    .calendar-period strong { display:block; color:inherit; font-size:11px; }
+    .calendar-empty { color:#a2adb2; font-size:11px; }
     dialog { width:min(460px,calc(100% - 32px)); padding:0; border:0; border-radius:18px; color:var(--ink); box-shadow:0 24px 80px rgba(23,32,28,.25); }
     dialog::backdrop { background:rgba(16,24,20,.55); backdrop-filter:blur(3px); }
     .dialog-head { padding:22px 24px 17px; border-bottom:1px solid var(--line); }
@@ -79,7 +101,7 @@
     .toast.error { background:#8d3030; }
     @media (max-width:1100px) { .table-wrap{overflow-x:auto}table{min-width:950px} }
     @media (max-width:900px) { .shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:18px 20px}.brand{padding-bottom:15px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}main{padding:28px 20px 50px}.summary{grid-template-columns:1fr 1fr} }
-    @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.search{width:100%} }
+    @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.top-actions{width:100%;justify-content:space-between}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.toolbar-meta{width:100%;justify-content:space-between}.search{width:100%} }
   </style>
 </head>
 <body>
@@ -98,7 +120,13 @@
     <main>
       <header class="topbar">
         <div><p class="eyebrow">EC2 inventory</p><h1>Instances</h1><p class="subtitle">See instance state and manage scheduler assignments.</p></div>
-        <button class="btn ghost" id="refreshButton">Refresh</button>
+        <div class="top-actions">
+          <div class="view-toggle" aria-label="Instance view">
+            <button class="active" type="button" id="tableViewButton">Table</button>
+            <button type="button" id="calendarViewButton">Calendar</button>
+          </div>
+          <button class="btn ghost" id="refreshButton">Refresh</button>
+        </div>
       </header>
       <section class="summary">
         <div class="summary-card"><span>Total instances</span><strong id="totalCount">—</strong></div>
@@ -108,13 +136,16 @@
       <section class="panel">
         <div class="toolbar">
           <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="search" type="search" placeholder="Search name, ID, schedule…" aria-label="Search instances"></div>
-          <div class="count" id="resultCount">Loading instances…</div>
+          <div class="toolbar-meta"><div class="count" id="resultCount">Loading instances…</div></div>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Instance</th><th>State</th><th>Type</th><th>Location</th><th>Schedule assignment</th><th>Ignore scheduler</th></tr></thead>
             <tbody id="instanceRows"><tr><td colspan="6"><div class="state-message">Loading EC2 inventory…</div></td></tr></tbody>
           </table>
+        </div>
+        <div class="calendar-wrap" id="calendarWrap">
+          <div class="calendar-grid" id="calendarGrid"></div>
         </div>
       </section>
     </main>
@@ -136,8 +167,22 @@
   <script>
     const apiUrl = '${api_url}';
     const rows = document.getElementById('instanceRows');
+    const tableWrap = document.querySelector('.table-wrap');
+    const calendarWrap = document.getElementById('calendarWrap');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const weekdays = [
+      {key:'mon', label:'Monday'},
+      {key:'tue', label:'Tuesday'},
+      {key:'wed', label:'Wednesday'},
+      {key:'thu', label:'Thursday'},
+      {key:'fri', label:'Friday'},
+      {key:'sat', label:'Saturday'},
+      {key:'sun', label:'Sunday'}
+    ];
     let instances = [];
     let schedules = [];
+    let schedulePeriods = {};
+    let currentView = 'table';
     let selectedIgnoreInstance = null;
 
     function request(path, options) {
@@ -165,14 +210,34 @@
       document.getElementById('unmanagedCount').textContent = instances.length - managed;
     }
 
-    function render(filter) {
+    function attributeValue(attribute, fallback) {
+      if (attribute === undefined || attribute === null) return fallback;
+      if (typeof attribute !== 'object' || Array.isArray(attribute)) return attribute;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'S')) return attribute.S;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'SS')) return attribute.SS;
+      return fallback;
+    }
+
+    function visibleInstances(filter) {
       const query = (filter || '').trim().toLowerCase();
-      const visible = instances.filter(function (instance) {
+      return instances.filter(function (instance) {
         return [instance.name, instance.instance_id, instance.schedule, instance.private_ip]
           .some(function (value) { return (value || '').toLowerCase().includes(query); });
       });
-      rows.innerHTML = '';
+    }
+
+    function render(filter) {
+      const visible = visibleInstances(filter);
       document.getElementById('resultCount').textContent = visible.length + (visible.length === 1 ? ' instance' : ' instances');
+      if (currentView === 'calendar') {
+        renderCalendar(visible);
+      } else {
+        renderTable(visible);
+      }
+    }
+
+    function renderTable(visible) {
+      rows.innerHTML = '';
       if (!visible.length) {
         rows.innerHTML = '<tr><td colspan="6"><div class="state-message"><strong>No instances found</strong>Try another search or check this AWS region.</div></td></tr>';
         return;
@@ -230,6 +295,110 @@
       });
     }
 
+    function renderCalendar(visible) {
+      calendarGrid.innerHTML = '';
+      const corner = document.createElement('div');
+      corner.className = 'calendar-head';
+      corner.textContent = 'Instance';
+      calendarGrid.appendChild(corner);
+      weekdays.forEach(function (day) {
+        const header = document.createElement('div');
+        header.className = 'calendar-head';
+        header.textContent = day.label;
+        calendarGrid.appendChild(header);
+      });
+
+      const managed = visible.filter(function (instance) { return instance.schedule; });
+      if (!managed.length) {
+        const empty = document.createElement('div');
+        empty.className = 'state-message';
+        empty.style.gridColumn = '1 / -1';
+        empty.innerHTML = '<strong>No managed instances found</strong>Assign a schedule to an instance to show it in the calendar.';
+        calendarGrid.appendChild(empty);
+        return;
+      }
+
+      managed.forEach(function (instance) {
+        const identity = document.createElement('div');
+        identity.className = 'calendar-instance';
+        const title = document.createElement('strong');
+        title.textContent = instance.name || instance.instance_id;
+        const schedule = document.createElement('div');
+        schedule.className = 'calendar-schedule';
+        schedule.textContent = instance.schedule;
+        identity.appendChild(title);
+        identity.appendChild(schedule);
+        if (instance.ignore_scheduler) {
+          const ignore = document.createElement('span');
+          ignore.className = 'calendar-ignore';
+          ignore.textContent = 'Ignored until ' + instance.ignore_scheduler;
+          identity.appendChild(ignore);
+        }
+        calendarGrid.appendChild(identity);
+
+        weekdays.forEach(function (day) {
+          const cell = document.createElement('div');
+          cell.className = 'calendar-day';
+          const periods = (schedulePeriods[instance.schedule] || []).filter(function (period) {
+            return period.days.includes(day.key);
+          });
+          if (!periods.length) {
+            cell.innerHTML = '<span class="calendar-empty">No window</span>';
+          } else {
+            periods.forEach(function (period) {
+              const block = document.createElement('div');
+              block.className = 'calendar-period' + (period.begin ? '' : ' stop-only');
+              const name = document.createElement('strong');
+              name.textContent = period.name;
+              const time = document.createElement('span');
+              time.textContent = period.begin
+                ? period.begin + '–' + period.end
+                : 'Stop at ' + period.end;
+              const zone = document.createElement('div');
+              zone.textContent = period.timezone;
+              block.appendChild(name);
+              block.appendChild(time);
+              block.appendChild(zone);
+              cell.appendChild(block);
+            });
+          }
+          calendarGrid.appendChild(cell);
+        });
+      });
+    }
+
+    function setView(view) {
+      currentView = view;
+      tableWrap.classList.toggle('hidden', view !== 'table');
+      calendarWrap.classList.toggle('active', view === 'calendar');
+      document.getElementById('tableViewButton').classList.toggle('active', view === 'table');
+      document.getElementById('calendarViewButton').classList.toggle('active', view === 'calendar');
+      render(document.getElementById('search').value);
+    }
+
+    function loadSchedulePeriods(scheduleNames) {
+      return Promise.all(scheduleNames.map(function (scheduleName) {
+        return request('/db/list_periods', {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=UTF-8'},
+          body:JSON.stringify({schedule_name:scheduleName})
+        }).then(function (data) {
+          schedulePeriods[scheduleName] = (data.period_list || []).map(function (period) {
+            return {
+              name:attributeValue(period.name, ''),
+              days:attributeValue(period.days, []),
+              begin:attributeValue(period.begintime, ''),
+              end:attributeValue(period.endtime, ''),
+              timezone:attributeValue(period.timezone, 'UTC')
+            };
+          });
+        }).catch(function (error) {
+          console.error('Calendar period loading failed for ' + scheduleName + ':', error);
+          schedulePeriods[scheduleName] = [];
+        });
+      }));
+    }
+
     function updateAssignment(instance, select, button) {
       const nextSchedule = select.value;
       const action = nextSchedule ? 'assign “' + nextSchedule + '” to' : 'remove the schedule from';
@@ -267,6 +436,10 @@
         .then(function (results) {
           instances = results[0].instances || [];
           schedules = results[1].schedules_list || [];
+          schedulePeriods = {};
+          return loadSchedulePeriods(schedules);
+        })
+        .then(function () {
           updateSummary();
           render(document.getElementById('search').value);
         })
@@ -311,6 +484,8 @@
     }
 
     document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
+    document.getElementById('tableViewButton').addEventListener('click', function () { setView('table'); });
+    document.getElementById('calendarViewButton').addEventListener('click', function () { setView('calendar'); });
     document.getElementById('refreshButton').addEventListener('click', load);
     document.getElementById('cancelIgnore').addEventListener('click', function () { document.getElementById('ignoreDialog').close(); });
     document.getElementById('removeIgnore').addEventListener('click', function () {

@@ -255,6 +255,22 @@ The page displays:
 
 Use **Refresh** to reload the EC2 inventory.
 
+### Calendar view
+
+Use the **Table** and **Calendar** buttons at the top of the Instances page to
+switch views.
+
+The Calendar view shows:
+
+- One row for each instance with an assigned schedule.
+- Monday through Sunday as columns.
+- Each period name, start and stop time, and timezone.
+- Stop-only periods as **Stop at HH:MM**.
+- Active ignore overrides next to the instance.
+
+The search field filters both views. Schedule assignments and ignore overrides
+are managed from the Table view.
+
 ### Assigning a schedule
 
 1. Find the instance.
