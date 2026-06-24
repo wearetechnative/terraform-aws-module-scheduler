@@ -257,21 +257,19 @@ Use **Refresh** to reload the EC2 inventory.
 
 ### Calendar view
 
-Use the **Table** and **Calendar** buttons at the top of the Instances page to
-switch views.
+Select **Calendar** on an instance row to open that instance's weekly calendar.
 
 The Calendar view shows:
 
-- One row for each instance with an assigned schedule.
-- A horizontal Monday-through-Sunday timeline.
-- Six-hour time markers from 00:00 through 18:00 for each weekday.
-- Operating windows as bars positioned by weekday and time.
-- Stop-only periods as vertical stop markers.
+- One calendar for the selected instance.
+- Monday through Sunday as columns.
+- Hourly timeslots as rows.
+- Scheduled running windows as green vertical blocks.
+- Stop-only periods as horizontal stop markers.
 - Period details and timezone when hovering over a bar or marker.
-- Active ignore overrides next to the instance.
+- The current schedule, state, and active ignore override above the calendar.
 
-The search field filters both views. Schedule assignments and ignore overrides
-are managed from the Table view.
+Instances without an assigned schedule do not have an available calendar.
 
 ### Assigning a schedule
 

@@ -33,10 +33,6 @@
     .btn { min-height:40px; padding:0 14px; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:9px; background:var(--dark); color:#fff; cursor:pointer; font-weight:700; }
     .btn:disabled { cursor:not-allowed; opacity:.5; }
     .btn.ghost { color:var(--muted); background:#eef1ec; }
-    .top-actions { display:flex; align-items:center; gap:9px; }
-    .view-toggle { display:flex; gap:4px; padding:4px; border:1px solid var(--line); border-radius:11px; background:#fff; }
-    .view-toggle button { min-height:32px; padding:0 11px; border:0; border-radius:7px; color:var(--muted); background:transparent; cursor:pointer; font-weight:700; font-size:12px; }
-    .view-toggle button.active { color:#fff; background:var(--dark); }
     .summary { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
     .summary-card { padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; }
     .summary-card span { color:var(--muted); font-size:12px; font-weight:650; }
@@ -48,7 +44,6 @@
     .search input { width:100%; height:41px; padding:0 12px 0 38px; border:1px solid var(--line); border-radius:9px; background:#fafbf9; outline:none; }
     .search input:focus,select:focus { border-color:#9aa68f; box-shadow:0 0 0 3px #edf2e4; outline:none; }
     .count { color:var(--muted); font-size:12px; font-weight:650; }
-    .toolbar-meta { display:flex; align-items:center; gap:14px; }
     table { width:100%; border-collapse:collapse; }
     th { padding:13px 18px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     td { padding:15px 18px; border-bottom:1px solid var(--line); vertical-align:middle; }
@@ -61,38 +56,34 @@
     .state.running { color:#25704b; background:#eaf7ef; }
     .state.stopped { color:#7a5555; background:#f7eeee; }
     .state.pending,.state.stopping { color:#806a28; background:#f8f3dd; }
-    .assignment { display:flex; align-items:center; gap:8px; min-width:285px; }
-    .assignment select { width:190px; height:39px; padding:0 10px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); }
+    .assignment { display:flex; align-items:center; gap:8px; min-width:390px; }
+    .assignment select { width:175px; height:39px; padding:0 10px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); }
     .unmanaged { color:#8a6c2f; font-size:11px; font-weight:700; }
     .override { display:flex; align-items:center; gap:8px; min-width:210px; }
     .override-value { color:#806a28; font-size:11px; font-weight:700; }
     .state-message { padding:65px 20px; text-align:center; color:var(--muted); }
     .state-message strong { display:block; color:var(--ink); margin-bottom:5px; }
-    .calendar-wrap { display:none; overflow-x:auto; }
-    .calendar-wrap.active { display:block; }
-    .table-wrap.hidden { display:none; }
-    .calendar-grid { min-width:1120px; display:grid; grid-template-columns:220px minmax(900px,1fr); }
-    .calendar-head { padding:13px 12px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); border-right:1px solid var(--line); font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
-    .calendar-head:last-child { border-right:0; }
-    .week-axis { display:grid; grid-template-columns:repeat(7,1fr); padding:0; }
-    .week-day-head { border-right:1px solid var(--line); text-align:center; }
-    .week-day-head:last-child { border-right:0; }
-    .week-day-name { display:block; padding:8px 6px 4px; }
-    .week-hours { display:grid; grid-template-columns:repeat(4,1fr); color:#8c9aa1; font-size:8px; font-weight:650; letter-spacing:0; }
-    .week-hours span { padding:0 2px 5px; text-align:left; }
-    .calendar-instance { min-height:82px; padding:15px 16px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); background:#fcfdfb; }
-    .calendar-instance strong { display:block; margin-bottom:3px; }
-    .calendar-schedule { color:var(--muted); font-size:11px; }
-    .calendar-ignore { display:inline-block; margin-top:8px; padding:3px 6px; border-radius:6px; color:#806a28; background:#f8f3dd; font-size:10px; font-weight:700; }
-    .week-track { position:relative; min-height:82px; border-bottom:1px solid var(--line); background-color:#fff; background-image:linear-gradient(to right,transparent calc(100% - 1px),var(--line) calc(100% - 1px)),linear-gradient(to right,transparent calc(100% - 1px),#edf1f3 calc(100% - 1px)); background-size:calc(100% / 7) 100%,calc(100% / 28) 100%; overflow:hidden; }
-    .timeline-bar { position:absolute; height:22px; min-width:3px; padding:3px 7px; overflow:hidden; border-radius:6px; color:#173f51; background:var(--accent); font-size:10px; font-weight:750; line-height:16px; white-space:nowrap; text-overflow:ellipsis; box-shadow:inset 0 0 0 1px rgba(17,47,65,.08); }
-    .timeline-stop { position:absolute; width:2px; height:26px; background:#c49427; }
-    .timeline-stop::before { content:""; position:absolute; left:-4px; top:-1px; width:10px; height:10px; border-radius:50%; background:#c49427; }
-    .timeline-stop-label { position:absolute; top:12px; left:6px; padding:2px 5px; border-radius:5px; color:#806a28; background:#fff4d7; font-size:9px; font-weight:750; white-space:nowrap; }
-    .calendar-legend { display:flex; gap:16px; align-items:center; padding:11px 16px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
-    .calendar-legend span { display:inline-flex; align-items:center; gap:6px; }
-    .legend-run,.legend-stop { display:inline-block; width:22px; height:8px; border-radius:4px; background:var(--accent); }
-    .legend-stop { width:2px; height:16px; border-radius:0; background:#c49427; }
+    .calendar-button { margin-left:auto; }
+    #instanceCalendarDialog { width:min(1180px,calc(100% - 32px)); }
+    .calendar-dialog-body { padding:0 24px 22px; overflow:auto; }
+    .calendar-summary { display:flex; flex-wrap:wrap; gap:8px 18px; padding:15px 0; color:var(--muted); font-size:12px; }
+    .calendar-summary strong { color:var(--ink); }
+    .calendar-detail { min-width:940px; display:grid; grid-template-columns:72px repeat(7,minmax(115px,1fr)); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+    .calendar-corner,.calendar-day-header { height:45px; display:grid; place-items:center; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); border-right:1px solid var(--line); font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.06em; }
+    .calendar-day-header:last-child { border-right:0; }
+    .time-axis { position:relative; height:960px; border-right:1px solid var(--line); background:#fafbf9; }
+    .time-label { position:absolute; right:9px; transform:translateY(-50%); color:#819099; font-size:10px; font-variant-numeric:tabular-nums; }
+    .day-track { position:relative; height:960px; border-right:1px solid var(--line); background-color:#fff; background-image:linear-gradient(to bottom,transparent 39px,#e5ecef 39px,#e5ecef 40px); background-size:100% 40px; }
+    .day-track:last-child { border-right:0; }
+    .run-block { position:absolute; left:7px; right:7px; min-height:4px; padding:5px 7px; overflow:hidden; border-radius:7px; color:#155d3d; background:#bce8ce; border:1px solid #72c497; font-size:10px; font-weight:750; line-height:1.3; box-shadow:0 2px 6px rgba(37,112,75,.12); }
+    .run-block strong { display:block; color:#174f38; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .stop-marker { position:absolute; left:5px; right:5px; height:2px; background:#c49427; }
+    .stop-marker::before { content:""; position:absolute; left:0; top:-4px; width:10px; height:10px; border-radius:50%; background:#c49427; }
+    .stop-marker span { position:absolute; left:14px; top:-9px; padding:2px 5px; border-radius:5px; color:#806a28; background:#fff4d7; font-size:9px; font-weight:750; white-space:nowrap; }
+    .calendar-legend { display:flex; gap:18px; padding-top:12px; color:var(--muted); font-size:11px; }
+    .calendar-legend span { display:inline-flex; align-items:center; gap:7px; }
+    .legend-run { width:23px; height:10px; border:1px solid #72c497; border-radius:4px; background:#bce8ce; }
+    .legend-stop { width:23px; height:2px; background:#c49427; }
     dialog { width:min(460px,calc(100% - 32px)); padding:0; border:0; border-radius:18px; color:var(--ink); box-shadow:0 24px 80px rgba(23,32,28,.25); }
     dialog::backdrop { background:rgba(16,24,20,.55); backdrop-filter:blur(3px); }
     .dialog-head { padding:22px 24px 17px; border-bottom:1px solid var(--line); }
@@ -109,7 +100,7 @@
     .toast.error { background:#8d3030; }
     @media (max-width:1100px) { .table-wrap{overflow-x:auto}table{min-width:950px} }
     @media (max-width:900px) { .shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:18px 20px}.brand{padding-bottom:15px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}main{padding:28px 20px 50px}.summary{grid-template-columns:1fr 1fr} }
-    @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.top-actions{width:100%;justify-content:space-between}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.toolbar-meta{width:100%;justify-content:space-between}.search{width:100%} }
+    @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.search{width:100%} }
   </style>
 </head>
 <body>
@@ -128,13 +119,7 @@
     <main>
       <header class="topbar">
         <div><p class="eyebrow">EC2 inventory</p><h1>Instances</h1><p class="subtitle">See instance state and manage scheduler assignments.</p></div>
-        <div class="top-actions">
-          <div class="view-toggle" aria-label="Instance view">
-            <button class="active" type="button" id="tableViewButton">Table</button>
-            <button type="button" id="calendarViewButton">Calendar</button>
-          </div>
-          <button class="btn ghost" id="refreshButton">Refresh</button>
-        </div>
+        <button class="btn ghost" id="refreshButton">Refresh</button>
       </header>
       <section class="summary">
         <div class="summary-card"><span>Total instances</span><strong id="totalCount">—</strong></div>
@@ -144,17 +129,13 @@
       <section class="panel">
         <div class="toolbar">
           <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="search" type="search" placeholder="Search name, ID, schedule…" aria-label="Search instances"></div>
-          <div class="toolbar-meta"><div class="count" id="resultCount">Loading instances…</div></div>
+          <div class="count" id="resultCount">Loading instances…</div>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Instance</th><th>State</th><th>Type</th><th>Location</th><th>Schedule assignment</th><th>Ignore scheduler</th></tr></thead>
             <tbody id="instanceRows"><tr><td colspan="6"><div class="state-message">Loading EC2 inventory…</div></td></tr></tbody>
           </table>
-        </div>
-        <div class="calendar-wrap" id="calendarWrap">
-          <div class="calendar-grid" id="calendarGrid"></div>
-          <div class="calendar-legend"><span><i class="legend-run"></i>Scheduled running window</span><span><i class="legend-stop"></i>Stop-only time</span></div>
         </div>
       </section>
     </main>
@@ -172,13 +153,21 @@
       </div>
     </form>
   </dialog>
+  <dialog id="instanceCalendarDialog">
+    <div class="dialog-head"><h2 id="calendarTitle">Instance calendar</h2><p id="calendarSubtitle">Weekly scheduled operating windows.</p></div>
+    <div class="calendar-dialog-body">
+      <div class="calendar-summary" id="calendarSummary"></div>
+      <div class="calendar-detail" id="calendarDetail"></div>
+      <div class="calendar-legend"><span><i class="legend-run"></i>Scheduled running</span><span><i class="legend-stop"></i>Stop-only time</span></div>
+    </div>
+    <div class="dialog-actions"><div></div><button class="btn ghost" type="button" id="closeCalendar">Close</button></div>
+  </dialog>
   <div class="toast" id="toast" role="status"></div>
   <script>
     const apiUrl = '${api_url}';
     const rows = document.getElementById('instanceRows');
-    const tableWrap = document.querySelector('.table-wrap');
-    const calendarWrap = document.getElementById('calendarWrap');
-    const calendarGrid = document.getElementById('calendarGrid');
+    const calendarDialog = document.getElementById('instanceCalendarDialog');
+    const calendarDetail = document.getElementById('calendarDetail');
     const weekdays = [
       {key:'mon', label:'Monday'},
       {key:'tue', label:'Tuesday'},
@@ -191,7 +180,6 @@
     let instances = [];
     let schedules = [];
     let schedulePeriods = {};
-    let currentView = 'table';
     let selectedIgnoreInstance = null;
 
     function request(path, options) {
@@ -238,11 +226,7 @@
     function render(filter) {
       const visible = visibleInstances(filter);
       document.getElementById('resultCount').textContent = visible.length + (visible.length === 1 ? ' instance' : ' instances');
-      if (currentView === 'calendar') {
-        renderCalendar(visible);
-      } else {
-        renderTable(visible);
-      }
+      renderTable(visible);
     }
 
     function renderTable(visible) {
@@ -299,114 +283,85 @@
         ignoreButton.addEventListener('click', function () { openIgnoreDialog(instance); });
         ignore.appendChild(ignoreValue); ignore.appendChild(ignoreButton); ignoreCell.appendChild(ignore);
 
+        const calendarButton = document.createElement('button');
+        calendarButton.className = 'btn ghost calendar-button';
+        calendarButton.textContent = 'Calendar';
+        calendarButton.disabled = !instance.schedule;
+        calendarButton.title = instance.schedule ? 'View weekly calendar' : 'Assign a schedule first';
+        calendarButton.addEventListener('click', function () { openCalendar(instance); });
+        assignment.appendChild(calendarButton);
+
         row.appendChild(identity); row.appendChild(stateCell); row.appendChild(type); row.appendChild(location); row.appendChild(assignmentCell); row.appendChild(ignoreCell);
         rows.appendChild(row);
       });
     }
 
-    function renderCalendar(visible) {
-      calendarGrid.innerHTML = '';
+    function openCalendar(instance) {
+      if (!instance.schedule) return;
+      document.getElementById('calendarTitle').textContent = instance.name || instance.instance_id;
+      document.getElementById('calendarSubtitle').textContent = 'Weekly calendar for ' + instance.schedule;
+      const summary = document.getElementById('calendarSummary');
+      summary.innerHTML = '<span><strong>Instance:</strong> ' + escapeHtml(instance.instance_id) + '</span>' +
+        '<span><strong>Schedule:</strong> ' + escapeHtml(instance.schedule) + '</span>' +
+        '<span><strong>State:</strong> ' + escapeHtml(instance.state) + '</span>' +
+        (instance.ignore_scheduler ? '<span><strong>Override:</strong> ' + escapeHtml(instance.ignore_scheduler) + '</span>' : '');
+      renderInstanceCalendar(schedulePeriods[instance.schedule] || []);
+      calendarDialog.showModal();
+    }
+
+    function renderInstanceCalendar(periods) {
+      calendarDetail.innerHTML = '';
       const corner = document.createElement('div');
-      corner.className = 'calendar-head';
-      corner.textContent = 'Instance';
-      calendarGrid.appendChild(corner);
-      const axis = document.createElement('div');
-      axis.className = 'calendar-head week-axis';
+      corner.className = 'calendar-corner';
+      corner.textContent = 'Time';
+      calendarDetail.appendChild(corner);
       weekdays.forEach(function (day) {
         const header = document.createElement('div');
-        header.className = 'week-day-head';
-        const dayName = document.createElement('span');
-        dayName.className = 'week-day-name';
-        dayName.textContent = day.label;
-        const hours = document.createElement('div');
-        hours.className = 'week-hours';
-        ['00:00', '06:00', '12:00', '18:00'].forEach(function (hour) {
-          const label = document.createElement('span');
-          label.textContent = hour;
-          hours.appendChild(label);
-        });
-        header.appendChild(dayName);
-        header.appendChild(hours);
-        axis.appendChild(header);
+        header.className = 'calendar-day-header';
+        header.textContent = day.label;
+        calendarDetail.appendChild(header);
       });
-      calendarGrid.appendChild(axis);
-
-      const managed = visible.filter(function (instance) { return instance.schedule; });
-      if (!managed.length) {
-        const empty = document.createElement('div');
-        empty.className = 'state-message';
-        empty.style.gridColumn = '1 / -1';
-        empty.innerHTML = '<strong>No managed instances found</strong>Assign a schedule to an instance to show it in the calendar.';
-        calendarGrid.appendChild(empty);
-        return;
+      const timeAxis = document.createElement('div');
+      timeAxis.className = 'time-axis';
+      for (let hour = 0; hour < 24; hour += 1) {
+        const label = document.createElement('span');
+        label.className = 'time-label';
+        label.style.top = (hour * 40) + 'px';
+        label.textContent = String(hour).padStart(2, '0') + ':00';
+        timeAxis.appendChild(label);
       }
+      calendarDetail.appendChild(timeAxis);
 
-      managed.forEach(function (instance) {
-        const identity = document.createElement('div');
-        identity.className = 'calendar-instance';
-        const title = document.createElement('strong');
-        title.textContent = instance.name || instance.instance_id;
-        const schedule = document.createElement('div');
-        schedule.className = 'calendar-schedule';
-        schedule.textContent = instance.schedule;
-        identity.appendChild(title);
-        identity.appendChild(schedule);
-        if (instance.ignore_scheduler) {
-          const ignore = document.createElement('span');
-          ignore.className = 'calendar-ignore';
-          ignore.textContent = 'Ignored until ' + instance.ignore_scheduler;
-          identity.appendChild(ignore);
-        }
-        calendarGrid.appendChild(identity);
-
+      weekdays.forEach(function (day) {
         const track = document.createElement('div');
-        track.className = 'week-track';
-        const windows = [];
-        const periodsForSchedule = schedulePeriods[instance.schedule] || [];
-        weekdays.forEach(function (day, dayIndex) {
-          periodsForSchedule.forEach(function (period, periodIndex) {
-            if (period.days.includes(day.key)) {
-              windows.push({
-                dayIndex:dayIndex,
-                lane:periodIndex,
-                period:period
-              });
-            }
-          });
-        });
-        const trackHeight = Math.max(82, 20 + periodsForSchedule.length * 25);
-        track.style.minHeight = trackHeight + 'px';
-        identity.style.minHeight = trackHeight + 'px';
-        windows.forEach(function (windowItem) {
-          const period = windowItem.period;
-          const dayStart = windowItem.dayIndex * 1440;
+        track.className = 'day-track';
+        periods.filter(function (period) {
+          return period.days.includes(day.key);
+        }).forEach(function (period) {
           const endMinutes = timeToMinutes(period.end);
-          const top = 10 + windowItem.lane * 25;
           if (period.begin) {
             const beginMinutes = timeToMinutes(period.begin);
             const duration = Math.max(1, endMinutes - beginMinutes);
-            const bar = document.createElement('div');
-            bar.className = 'timeline-bar';
-            bar.style.left = ((dayStart + beginMinutes) / 10080 * 100) + '%';
-            bar.style.width = (duration / 10080 * 100) + '%';
-            bar.style.top = top + 'px';
-            bar.textContent = period.name + ' · ' + period.begin + '–' + period.end;
-            bar.title = period.name + ': ' + period.begin + '–' + period.end + ' (' + period.timezone + ')';
-            track.appendChild(bar);
+            const block = document.createElement('div');
+            block.className = 'run-block';
+            block.style.top = (beginMinutes / 1440 * 960) + 'px';
+            block.style.height = Math.max(4, duration / 1440 * 960) + 'px';
+            block.title = period.name + ': ' + period.begin + '–' + period.end + ' (' + period.timezone + ')';
+            block.innerHTML = '<strong>' + escapeHtml(period.name) + '</strong>' +
+              escapeHtml(period.begin + '–' + period.end);
+            track.appendChild(block);
           } else {
             const marker = document.createElement('div');
-            marker.className = 'timeline-stop';
-            marker.style.left = ((dayStart + endMinutes) / 10080 * 100) + '%';
-            marker.style.top = top + 'px';
+            marker.className = 'stop-marker';
+            marker.style.top = (endMinutes / 1440 * 960) + 'px';
             marker.title = period.name + ': stop at ' + period.end + ' (' + period.timezone + ')';
             const label = document.createElement('span');
-            label.className = 'timeline-stop-label';
             label.textContent = period.name + ' · ' + period.end;
             marker.appendChild(label);
             track.appendChild(marker);
           }
         });
-        calendarGrid.appendChild(track);
+        calendarDetail.appendChild(track);
       });
     }
 
@@ -415,13 +370,10 @@
       return (Number(parts[0]) * 60) + Number(parts[1]);
     }
 
-    function setView(view) {
-      currentView = view;
-      tableWrap.classList.toggle('hidden', view !== 'table');
-      calendarWrap.classList.toggle('active', view === 'calendar');
-      document.getElementById('tableViewButton').classList.toggle('active', view === 'table');
-      document.getElementById('calendarViewButton').classList.toggle('active', view === 'calendar');
-      render(document.getElementById('search').value);
+    function escapeHtml(value) {
+      const element = document.createElement('div');
+      element.textContent = value;
+      return element.innerHTML;
     }
 
     function loadSchedulePeriods(scheduleNames) {
@@ -532,8 +484,7 @@
     }
 
     document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
-    document.getElementById('tableViewButton').addEventListener('click', function () { setView('table'); });
-    document.getElementById('calendarViewButton').addEventListener('click', function () { setView('calendar'); });
+    document.getElementById('closeCalendar').addEventListener('click', function () { calendarDialog.close(); });
     document.getElementById('refreshButton').addEventListener('click', load);
     document.getElementById('cancelIgnore').addEventListener('click', function () { document.getElementById('ignoreDialog').close(); });
     document.getElementById('removeIgnore').addEventListener('click', function () {

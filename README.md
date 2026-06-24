@@ -15,7 +15,7 @@ bucket through CloudFront and is protected by Amazon Cognito.
 - Create, edit, assign, remove, and delete periods.
 - Create unassigned periods for later use.
 - Assign, change, or remove schedules on EC2 instances.
-- View assigned instance schedules in a weekly calendar.
+- Open a per-instance weekly calendar with hourly timeslots and running windows.
 - Temporarily prevent scheduled stopping with `Ignore_scheduler`.
 - Authenticate users with Cognito managed login and OAuth 2.0 PKCE.
 - Publish the frontend on a custom Route 53 domain with an ACM certificate.
