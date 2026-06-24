@@ -264,6 +264,7 @@ The Calendar view shows:
 
 - One row for each instance with an assigned schedule.
 - A horizontal Monday-through-Sunday timeline.
+- Six-hour time markers from 00:00 through 18:00 for each weekday.
 - Operating windows as bars positioned by weekday and time.
 - Stop-only periods as vertical stop markers.
 - Period details and timezone when hovering over a bar or marker.

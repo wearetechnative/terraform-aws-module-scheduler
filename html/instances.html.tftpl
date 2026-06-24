@@ -75,13 +75,16 @@
     .calendar-head { padding:13px 12px; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); border-right:1px solid var(--line); font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
     .calendar-head:last-child { border-right:0; }
     .week-axis { display:grid; grid-template-columns:repeat(7,1fr); padding:0; }
-    .week-axis span { padding:13px 8px; border-right:1px solid var(--line); text-align:center; }
-    .week-axis span:last-child { border-right:0; }
+    .week-day-head { border-right:1px solid var(--line); text-align:center; }
+    .week-day-head:last-child { border-right:0; }
+    .week-day-name { display:block; padding:8px 6px 4px; }
+    .week-hours { display:grid; grid-template-columns:repeat(4,1fr); color:#8c9aa1; font-size:8px; font-weight:650; letter-spacing:0; }
+    .week-hours span { padding:0 2px 5px; text-align:left; }
     .calendar-instance { min-height:82px; padding:15px 16px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); background:#fcfdfb; }
     .calendar-instance strong { display:block; margin-bottom:3px; }
     .calendar-schedule { color:var(--muted); font-size:11px; }
     .calendar-ignore { display:inline-block; margin-top:8px; padding:3px 6px; border-radius:6px; color:#806a28; background:#f8f3dd; font-size:10px; font-weight:700; }
-    .week-track { position:relative; min-height:82px; border-bottom:1px solid var(--line); background-color:#fff; background-image:linear-gradient(to right,transparent calc(100% - 1px),var(--line) calc(100% - 1px)); background-size:calc(100% / 7) 100%; overflow:hidden; }
+    .week-track { position:relative; min-height:82px; border-bottom:1px solid var(--line); background-color:#fff; background-image:linear-gradient(to right,transparent calc(100% - 1px),var(--line) calc(100% - 1px)),linear-gradient(to right,transparent calc(100% - 1px),#edf1f3 calc(100% - 1px)); background-size:calc(100% / 7) 100%,calc(100% / 28) 100%; overflow:hidden; }
     .timeline-bar { position:absolute; height:22px; min-width:3px; padding:3px 7px; overflow:hidden; border-radius:6px; color:#173f51; background:var(--accent); font-size:10px; font-weight:750; line-height:16px; white-space:nowrap; text-overflow:ellipsis; box-shadow:inset 0 0 0 1px rgba(17,47,65,.08); }
     .timeline-stop { position:absolute; width:2px; height:26px; background:#c49427; }
     .timeline-stop::before { content:""; position:absolute; left:-4px; top:-1px; width:10px; height:10px; border-radius:50%; background:#c49427; }
@@ -310,8 +313,20 @@
       const axis = document.createElement('div');
       axis.className = 'calendar-head week-axis';
       weekdays.forEach(function (day) {
-        const header = document.createElement('span');
-        header.textContent = day.label;
+        const header = document.createElement('div');
+        header.className = 'week-day-head';
+        const dayName = document.createElement('span');
+        dayName.className = 'week-day-name';
+        dayName.textContent = day.label;
+        const hours = document.createElement('div');
+        hours.className = 'week-hours';
+        ['00:00', '06:00', '12:00', '18:00'].forEach(function (hour) {
+          const label = document.createElement('span');
+          label.textContent = hour;
+          hours.appendChild(label);
+        });
+        header.appendChild(dayName);
+        header.appendChild(hours);
         axis.appendChild(header);
       });
       calendarGrid.appendChild(axis);
