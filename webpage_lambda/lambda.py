@@ -108,6 +108,23 @@ def handler(event, context):
             }
         )
 
+    def validate_period(period):
+        period_name = period.get("period_name", "").strip()
+        selected_days = period.get("selected_days", [])
+        begin_time = period.get("begin_time", "").strip()
+        end_time = period.get("end_time", "").strip()
+        timezone = period.get("timezone", "").strip()
+
+        if not all([period_name, selected_days, end_time, timezone]):
+            return None, "Name, days, stop time, and timezone are required"
+
+        period["period_name"] = period_name
+        period["selected_days"] = selected_days
+        period["begin_time"] = begin_time
+        period["end_time"] = end_time
+        period["timezone"] = timezone
+        return period, None
+
     def get_period_assignments():
         response = dynamodb.query(
             TableName=table_name,
@@ -453,6 +470,9 @@ def handler(event, context):
         period = event.get('body')
         if period is not None:
             period = json.loads(period)
+            period, validation_error = validate_period(period)
+            if validation_error:
+                return json_response(400, {"message": validation_error})
             save_period(period)
             return json_response(
                 200,
@@ -466,22 +486,10 @@ def handler(event, context):
             return json_response(400, {"message": "Period data is required"})
 
         period = json.loads(period)
-        period_name = period.get("period_name", "").strip()
-        selected_days = period.get("selected_days", [])
-        begin_time = period.get("begin_time", "").strip()
-        end_time = period.get("end_time", "").strip()
-        timezone = period.get("timezone", "").strip()
-        if not all([
-            period_name,
-            selected_days,
-            begin_time,
-            end_time,
-            timezone
-        ]):
-            return json_response(
-                400,
-                {"message": "Name, days, times, and timezone are required"}
-            )
+        period, validation_error = validate_period(period)
+        if validation_error:
+            return json_response(400, {"message": validation_error})
+        period_name = period["period_name"]
 
         existing_period = dynamodb.get_item(
             TableName=table_name,
@@ -585,6 +593,9 @@ def handler(event, context):
         print(period)
         if period != None:
             period = json.loads(period)
+            period, validation_error = validate_period(period)
+            if validation_error:
+                return json_response(400, {"message": validation_error})
             save_period(period)
             schedule = period["schedule_name"]
             p_of_schedule = period["period_name"]

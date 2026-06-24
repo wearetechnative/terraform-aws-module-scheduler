@@ -49,6 +49,12 @@ See [pre-commit installation](https://pre-commit.com/#install) on how to install
 
 To use this module ...
 
+## Architecture
+
+See the [AWS infrastructure diagram](docs/architecture.md). Editable sources
+are available in [draw.io](docs/architecture.drawio) and
+[Mermaid](docs/architecture.mmd) formats.
+
 ```hcl
 provider "aws" {
   region = "eu-west-1"

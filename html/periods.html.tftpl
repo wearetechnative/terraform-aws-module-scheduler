@@ -190,7 +190,7 @@
         const daysCell = document.createElement('td'); const days = document.createElement('div'); days.className = 'days';
         periodDays.forEach(function (day) { const item = document.createElement('span'); item.className = 'day'; item.textContent = day; days.appendChild(item); });
         daysCell.appendChild(days);
-        const start = document.createElement('td'); start.className = 'time'; start.textContent = beginTime;
+        const start = document.createElement('td'); start.className = 'time'; start.textContent = beginTime || '—';
         const end = document.createElement('td'); end.className = 'time'; end.textContent = endTime;
         const zone = document.createElement('td'); zone.className = 'timezone'; zone.textContent = periodTimezone;
         const scheduleCell = document.createElement('td');
@@ -263,7 +263,7 @@
         '<td><span class="field-label">Weekdays</span><div class="day-picker">' +
         weekdayOrder.map(function (day) { return '<label><input type="checkbox" name="day" value="' + day + '"><span>' + day + '</span></label>'; }).join('') +
         '</div></td>' +
-        '<td><label class="field-label" for="beginTime">Start time</label><input id="beginTime" type="time"></td>' +
+        '<td><label class="field-label" for="beginTime">Start time (optional)</label><input id="beginTime" type="time" title="Leave empty to create a stop-only period"></td>' +
         '<td><label class="field-label" for="endTime">Stop time</label><input id="endTime" type="time"></td>' +
         '<td><label class="field-label" for="timezone">Timezone</label><select id="timezone"><option>Europe/Amsterdam</option><option>Europe/London</option><option>UTC</option><option>America/New_York</option><option>America/Los_Angeles</option><option>Asia/Kolkata</option><option>Asia/Singapore</option><option>Australia/Sydney</option></select></td>' +
         '<td><span class="field-label">Schedules</span><span class="unassigned">' + escapeHtml(assignedSchedules.length ? assignedSchedules.join(', ') : (dropdown.value === '__all__' ? 'Unassigned' : dropdown.value)) + '</span></td>' +
@@ -406,7 +406,7 @@
       const selectedDays = Array.from(document.querySelectorAll('input[name="day"]:checked')).map(function (item) { return item.value; });
       const begin = document.getElementById('beginTime').value;
       const end = document.getElementById('endTime').value;
-      if (!name || !selectedDays.length || !begin || !end) { toast('Enter a name, times, and at least one weekday.', true); return; }
+      if (!name || !selectedDays.length || !end) { toast('Enter a name, stop time, and at least one weekday.', true); return; }
       if (!editingPeriod && periods.some(function (item) { return attributeValue(item.name, '') === name; })) { toast('This schedule already contains that period.', true); return; }
       const showingAll = dropdown.value === '__all__';
       const payload = {period_name:name, selected_days:selectedDays, begin_time:begin, end_time:end, timezone:document.getElementById('timezone').value};
