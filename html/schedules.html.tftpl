@@ -56,7 +56,14 @@
     .tag { padding:5px 9px; border-radius:7px; color:#465149; background:#f0f2ef; font-size:11px; font-weight:650; }
     .status { display:inline-flex; align-items:center; gap:7px; padding:5px 9px; border-radius:999px; color:#25704b; background:#eaf7ef; font-size:11px; font-weight:750; }
     .status::before { content:""; width:6px; height:6px; border-radius:50%; background:#4ba979; }
-    .action { color:#59645e; font-weight:700; font-size:12px; }
+    .status.in-use { color:#806a28; background:#f8f3dd; }
+    .status.in-use::before { background:#c49a31; }
+    .actions { display:flex; align-items:center; gap:8px; }
+    .action { padding:7px 9px; border:0; border-radius:8px; background:transparent; color:#59645e; font:inherit; font-weight:700; font-size:12px; cursor:pointer; }
+    .action:hover { background:#eef1ec; }
+    .action.danger { color:var(--danger); }
+    .action:disabled { color:#9ba7ad; cursor:not-allowed; }
+    .action:disabled:hover { background:transparent; }
     .state { padding:60px 20px; text-align:center; color:var(--muted); }
     .state strong { display:block; color:var(--ink); margin-bottom:5px; }
     .skeleton td div { height:30px; border-radius:8px; background:linear-gradient(90deg,#f1f3f0 25%,#fafbfa 37%,#f1f3f0 63%); background-size:400% 100%; animation:shimmer 1.4s infinite; }
@@ -78,6 +85,7 @@
     .form-error.show { display:block; }
     .toast { position:fixed; right:24px; bottom:24px; padding:13px 16px; border-radius:11px; background:var(--dark); color:#fff; box-shadow:0 15px 40px rgba(0,0,0,.18); transform:translateY(20px); opacity:0; pointer-events:none; transition:.2s ease; font-size:13px; font-weight:650; }
     .toast.show { transform:translateY(0); opacity:1; }
+    .toast.error { background:#8d3030; }
     @keyframes shimmer { from { background-position:100% 0; } to { background-position:0 0; } }
     @media (max-width:900px) { .shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:18px 20px}.brand{padding-bottom:15px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}main{padding:28px 20px 50px}.summary{grid-template-columns:1fr 1fr}.table-wrap{overflow-x:auto}table{min-width:720px} }
     @media (max-width:600px) { .topbar{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.search{width:100%} }
@@ -103,7 +111,7 @@
       </header>
       <section class="summary">
         <div class="summary-card"><span>Total schedules</span><strong id="totalCount">—</strong></div>
-        <div class="summary-card"><span>Active schedules</span><strong id="activeCount">—</strong></div>
+        <div class="summary-card"><span>Assigned schedules</span><strong id="activeCount">—</strong></div>
       </section>
       <section class="panel">
         <div class="toolbar">
@@ -150,10 +158,10 @@
       });
     }
 
-    function toast(message) {
+    function toast(message, isError) {
       const element = document.getElementById('toast');
       element.textContent = message;
-      element.className = 'toast show';
+      element.className = 'toast show' + (isError ? ' error' : '');
       window.setTimeout(function () { element.className = 'toast'; }, 2800);
     }
 
@@ -204,30 +212,58 @@
         periodsCell.appendChild(tags);
 
         const statusCell = document.createElement('td');
-        statusCell.innerHTML = '<span class="status">Active</span>';
+        statusCell.innerHTML = item.instances.length
+          ? '<span class="status in-use">In use · ' + item.instances.length + '</span>'
+          : '<span class="status">Available</span>';
         const actionCell = document.createElement('td');
+        const actions = document.createElement('div');
+        actions.className = 'actions';
         const link = document.createElement('a');
         link.className = 'action';
         link.href = 'periods.html?schedule=' + encodeURIComponent(item.name);
         link.textContent = 'Open →';
-        actionCell.appendChild(link);
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'action danger';
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'Delete';
+        deleteButton.disabled = item.instances.length > 0;
+        deleteButton.title = item.instances.length
+          ? 'Remove this schedule from all instances before deleting it'
+          : 'Delete this schedule';
+        deleteButton.addEventListener('click', function () {
+          deleteSchedule(item.name, deleteButton);
+        });
+        actions.appendChild(link);
+        actions.appendChild(deleteButton);
+        actionCell.appendChild(actions);
         row.appendChild(nameCell); row.appendChild(periodsCell); row.appendChild(statusCell); row.appendChild(actionCell);
         body.appendChild(row);
       });
     }
 
-    fetch(apiUrl + '/db')
-      .then(function (response) { if (!response.ok) throw new Error('API unavailable'); return response.json(); })
-      .then(function (data) {
-        const names = data.schedules_list || [];
+    function loadSchedules() {
+      return Promise.all([request('/db'), request('/instances')])
+      .then(function (results) {
+        const names = results[0].schedules_list || [];
+        const instances = results[1].instances || [];
         return Promise.all(names.map(function (name) {
-          return getPeriods(name).then(function (periods) { return {name:name, periods:periods}; });
+          return getPeriods(name).then(function (periods) {
+            return {
+              name:name,
+              periods:periods,
+              instances:instances.filter(function (instance) {
+                return instance.schedule === name;
+              })
+            };
+          });
         }));
       })
       .then(function (items) {
         schedules = items;
         document.getElementById('totalCount').textContent = items.length;
-        document.getElementById('activeCount').textContent = items.length;
+        document.getElementById('activeCount').textContent = items.filter(function (item) {
+          return item.instances.length > 0;
+        }).length;
         render('');
       })
       .catch(function () {
@@ -236,6 +272,29 @@
         document.getElementById('resultCount').textContent = 'API unavailable';
         body.innerHTML = '<tr><td colspan="4"><div class="state"><strong>Could not load schedules</strong>Check the API Gateway and Lambda configuration.</div></td></tr>';
       });
+    }
+
+    function deleteSchedule(name, button) {
+      if (!window.confirm('Permanently delete schedule “' + name + '”? Its periods will remain available.')) return;
+      button.disabled = true;
+      button.textContent = 'Deleting…';
+      request('/db/delete_schedule', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({schedule_name:name})
+      })
+        .then(function () {
+          toast('Schedule deleted');
+          return loadSchedules();
+        })
+        .catch(function (error) {
+          toast(error.message || 'Could not delete schedule', true);
+          button.disabled = false;
+          button.textContent = 'Delete';
+        });
+    }
+
+    loadSchedules();
 
     document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
 

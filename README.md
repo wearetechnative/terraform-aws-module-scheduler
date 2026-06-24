@@ -1,58 +1,110 @@
-# Terraform AWS [Scheduler] ![](https://img.shields.io/github/workflow/status/TechNative-B-V/terraform-aws-module-name/tflint.yaml?style=plastic)
+# Terraform AWS Instance Scheduler
 
-<!-- SHIELDS -->
+[![TechNative](we-are-technative.png)](https://www.technative.nl)
 
-This module allows you to start and stop instances on a defined schedule. The schedules are stored in a DynamoDB table along with their time periods.
+This Terraform module deploys an authenticated web application that starts and
+stops EC2 instances according to reusable schedules.
 
-# Key Concepts
+Schedules and periods are stored in DynamoDB. An EventBridge rule invokes the
+scheduler Lambda every five minutes. The frontend is served from a private S3
+bucket through CloudFront and is protected by Amazon Cognito.
 
-### Schedule
-A named schedule that defines when instances tagged with that schedule should run. The schedule name is used as the value for the InstanceScheduler tag on any instance you want to manage via this module.
+## Features
+
+- Create, view, and delete unused schedules through the frontend.
+- Create, edit, assign, remove, and delete periods.
+- Create unassigned periods for later use.
+- Assign, change, or remove schedules on EC2 instances.
+- Temporarily prevent scheduled stopping with `Ignore_scheduler`.
+- Authenticate users with Cognito managed login and OAuth 2.0 PKCE.
+- Publish the frontend on a custom Route 53 domain with an ACM certificate.
+- Use either an existing public hosted zone or a new delegated hosted zone.
+- Optionally create initial schedules and periods from Terraform.
+
+## Architecture
+
+[![Instance Scheduler AWS architecture](docs/architecture.png)](docs/architecture.md)
+
+See the [architecture documentation](docs/architecture.md) for the request
+flows and the editable [Mermaid source](docs/architecture.mmd).
+
+The main request paths are:
+
+1. Route 53 directs the frontend hostname to CloudFront.
+2. CloudFront serves static files from a private S3 bucket.
+3. Cognito authenticates users.
+4. CloudFront forwards `/db*` and `/instances*` requests to API Gateway.
+5. API Gateway validates the Cognito JWT and invokes the management Lambda.
+6. EventBridge invokes the scheduler Lambda every five minutes.
+7. Both Lambda functions use DynamoDB and EC2 APIs.
+
+## Scheduling model
 
 ### Period
-Each schedule has one or more periods. A period defines a set of rules about which days, what timezone, what start time, and what end time the schedule applies.
 
-## Period Attributes
+A period defines:
 
-Each period includes the following:
+- One or more weekdays: `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, or `sun`.
+- An optional start time in 24-hour `HH:MM` format.
+- A required stop time in 24-hour `HH:MM` format.
+- An IANA timezone such as `Europe/Amsterdam`.
 
-##  Attribute Description
-    weekdays -  One or more days of the week when the period is active.You can use multiple days.(e.g. mon, tue, fri)
-                Valid abbreviations: mon, tue,  wed, thu, fri, sat, sun.
-    timezone -  The timezone for interpreting begintime and endtime.UTC is the default timezone.                       
-    begintime-  The time of day when instances should start (in 24-hour format, e.g. 09:00).
-    endtime  -  The time of day when instances should stop (in 24-hour format, e.g. 17:00).
+When the start time is omitted, the period is stop-only. It does not start an
+instance and starts returning a stop decision after the configured stop time.
 
-### Rules & Examples
+### Schedule
 
-Each schedule must have at least one period.
+A schedule contains one or more periods. A schedule cannot be empty.
 
-You can have multiple periods within a schedule (for instance, one for weekdays 9-17, another for weekends).
+A schedule can only be deleted when no EC2 instance has that schedule assigned.
+Deleting a schedule does not delete its periods.
 
-Times are in 24-hour format.
+Schedules declared in the Terraform `schedules` input remain Terraform-managed.
+If one is deleted in the frontend, a later `terraform apply` can recreate it.
 
-Days must use consistent abbreviations (e.g. mon, tue, etc.).
+The schedule name is stored in the EC2 tag:
 
-[![](we-are-technative.png)](https://www.technative.nl)
+```text
+InstanceScheduler=<schedule-name>
+```
 
-## How does it work
+If any assigned period returns a start decision, the instance is started.
+Otherwise, a stop decision can stop the instance.
 
-### First use after you clone this repository or when .pre-commit-config.yaml is updated
+### Ignore override
 
-Run `pre-commit install` to install any guardrails implemented using pre-commit.
+The frontend can add an override tag:
 
-See [pre-commit installation](https://pre-commit.com/#install) on how to install pre-commit.
+```text
+Ignore_scheduler=22:00 Europe/Amsterdam
+```
 
-...
+This keeps the schedule assigned but prevents the scheduler from stopping the
+instance until the configured local time. The tag is removed automatically
+after it expires, and normal scheduling resumes on the next evaluation.
+
+## Prerequisites
+
+The caller must provide:
+
+- An AWS provider for the deployment region.
+- An aliased AWS provider for `us-east-1`, required by CloudFront ACM.
+- An existing KMS key ARN.
+- An existing SQS queue ARN used as the Lambda dead-letter queue.
+- A globally unique S3 bucket name.
+- A public Route 53 hosted zone ID, or a domain name for a new hosted zone.
+- Permission to create the resources used by this module.
 
 ## Usage
 
-To use this module ...
+### Existing Route 53 hosted zone
 
+This is the recommended configuration when the parent domain already exists in
+Route 53.
 
 ```hcl
 provider "aws" {
-  region = "eu-west-1"
+  region = "eu-central-1"
 }
 
 provider "aws" {
@@ -60,129 +112,171 @@ provider "aws" {
   region = "us-east-1"
 }
 
-module "scheduler"{
-    source = "git@github.com:wearetechnative/terraform-aws-lambda.git"
-    providers = {
-      aws           = aws
-      aws.us_east_1 = aws.us_east_1
-    }
-    bucket_name = "instancescheduler-bucket-example"
-    route53_zone_name = "example.com"
-    frontend_fqdn = "scheduler.example.com"
-    dynamodb_table_name = "instance_scheduler"
-    kms_key_arn = *******
-    lambda_role_name = "scheduler_role"
-    periods = [
-      {
-         "name": "7am-to-8pm",
-         "days": ["mon", "tue", "wed", "thu", "fri"],
-         "begintime": "7:00",
-         "endtime": "20:00",
-         "timezone": "Europe/Amsterdam"
-      },
-      {
-         "name": "8am-to-7pm",
-         "days": ["mon", "tue", "wed", "thu", "fri"],
-         "begintime": "8:00",
-         "endtime": "19:00",
-         "timezone": "Europe/Amsterdam"
-      }
-    ]
-    schedules = [
-      {
-         "name": "mon-fri-7am-to-8pm",
-         "period": ["7am-to-8pm"]
-      },
-      {
-         "name": "mon-fri-8am-to-7pm",
-         "period": ["8am-to-7pm"]
-      }
-    ]
-    sqs_arn = ********
+module "scheduler" {
+  source = "git::ssh://git@github.com/wearetechnative/terraform-aws-module-scheduler.git?ref=<version>"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  bucket_name          = "technative-instance-scheduler"
+  dynamodb_table_name  = "instance-scheduler"
+  lambda_role_name     = "instance-scheduler"
+  kms_key_arn          = aws_kms_key.scheduler.arn
+  sqs_arn              = aws_sqs_queue.scheduler_dlq.arn
+  route53_zone_id      = "Z0123456789EXAMPLE"
+  frontend_fqdn        = "scheduler.example.com"
 }
 ```
 
-The `periods` and `schedules` inputs are optional. When both are omitted,
-deploy the module and create a period through the frontend first, followed by
-a schedule that uses that period.
+The module creates the ACM validation record and the CloudFront `A` and `AAAA`
+alias records in the supplied zone.
 
-By default, the module creates the public hosted zone configured by
-`route53_zone_name`. To use an existing public Route 53 hosted zone instead,
-provide its ID and omit `route53_zone_name`:
+### New delegated hosted zone
+
+To create a dedicated hosted zone for the frontend:
 
 ```hcl
 module "scheduler" {
-  # ...
-  route53_zone_id = "Z0123456789EXAMPLE"
-  frontend_fqdn   = "scheduler.example.com"
+  # Other required inputs omitted
+
+  route53_zone_name = "scheduler.example.com"
+  frontend_fqdn     = "scheduler.example.com"
 }
 ```
 
-<!-- BEGIN_TF_DOCS -->
-## Ignore Scheduler functionality
+After applying, delegate `scheduler.example.com` from the parent DNS zone to
+the name servers returned by:
 
-You can use this feature to keep an instance running beyond its scheduled stop time. To enable it, simply add a tag to the instance called `Ignore_scheduler` with a value that indicates the time until which the instance should remain running, including the timezone `(for example: 22:00 Europe/Amsterdam)`. After that time, the tag will be automatically removed and the instance will resume its normal schedule.
+```hcl
+output "scheduler_name_servers" {
+  value = module.scheduler.route53_name_servers
+}
+```
 
-## Requirements
+Do not create a second hosted zone for an existing authoritative domain unless
+you intend to change its delegation.
 
-No requirements.
+### Initial periods and schedules
 
-## Providers
+Both inputs are optional. When omitted, the application starts with an empty
+configuration and periods and schedules can be created through the frontend.
 
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | n/a |
+```hcl
+module "scheduler" {
+  # Other required inputs omitted
 
-## Modules
+  periods = [
+    {
+      name      = "office-hours"
+      days      = ["mon", "tue", "wed", "thu", "fri"]
+      begintime = "09:00"
+      endtime   = "17:00"
+      timezone  = "Europe/Amsterdam"
+    },
+    {
+      name      = "weekend-stop"
+      days      = ["sat", "sun"]
+      begintime = ""
+      endtime   = "20:00"
+      timezone  = "Europe/Amsterdam"
+    }
+  ]
 
-| Name | Source | Version |
-|------|--------|---------|
-| <a name="module_dynamodb_instance_scheduler"></a> [dynamodb\_instance\_scheduler](#module\_dynamodb\_instance\_scheduler) | github.com/wearetechnative/terraform-aws-module-dynamodb.git | n/a |
-| <a name="module_ec2_lambda"></a> [ec2\_lambda](#module\_ec2\_lambda) | github.com/wearetechnative/terraform-aws-lambda.git | n/a |
-| <a name="module_iam_role_lambda_instance_scheduler"></a> [iam\_role\_lambda\_instance\_scheduler](#module\_iam\_role\_lambda\_instance\_scheduler) | github.com/wearetechnative/terraform-aws-iam-role.git | n/a |
-| <a name="module_iam_role_webpage_scheduler"></a> [iam\_role\_webpage\_scheduler](#module\_iam\_role\_webpage\_scheduler) | github.com/wearetechnative/terraform-aws-iam-role.git | n/a |
-| <a name="module_lambda_start_stop_instances"></a> [lambda\_start\_stop\_instances](#module\_lambda\_start\_stop\_instances) | github.com/wearetechnative/terraform-aws-lambda.git | n/a |
-| <a name="module_sqs_dlq"></a> [sqs\_dlq](#module\_sqs\_dlq) | ../01_sqs_dlq | n/a |
+  schedules = [
+    {
+      name   = "business-hours"
+      period = ["office-hours", "weekend-stop"]
+    }
+  ]
+}
+```
 
-## Resources
+Every predefined schedule must contain at least one period.
 
-| Name | Type |
-|------|------|
-| [aws_apigatewayv2_api.my_api](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_api) | resource |
-| [aws_apigatewayv2_integration.int](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_integration) | resource |
-| [aws_apigatewayv2_route.my_route](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_route) | resource |
-| [aws_apigatewayv2_stage.my_api_stg](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_stage) | resource |
-| [aws_cloudwatch_event_rule.rule](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule) | resource |
-| [aws_cloudwatch_event_target.lambda_trigger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
-| [aws_dynamodb_table_item.period](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item) | resource |
-| [aws_dynamodb_table_item.schedules](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item) | resource |
-| [aws_kms_grant.a](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_grant) | resource |
-| [aws_lambda_permission.allow_API](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_lambda_permission.allow_API_1](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_lambda_permission.allow_API_2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_lambda_permission.allow_API_3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_lambda_permission.allow_eventbridge](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_s3_bucket.webpage_bucket](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
-| [aws_s3_bucket_object.object](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_object) | resource |
-| [aws_s3_bucket_object.object2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_object) | resource |
-| [aws_s3_bucket_object.object3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_object) | resource |
-| [aws_s3_bucket_website_configuration.website_conf](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_website_configuration) | resource |
-| [aws_iam_policy_document.instance_scheduler](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
-| [aws_iam_policy_document.launch_ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+## Creating frontend users
+
+The Cognito user pool only permits administrator-created users. Email is
+currently configured as the username.
+
+```bash
+aws cognito-idp admin-create-user \
+  --region eu-central-1 \
+  --user-pool-id <user-pool-id> \
+  --username user@example.com
+```
+
+Retrieve the user pool ID with:
+
+```hcl
+output "scheduler_user_pool_id" {
+  value = module.scheduler.cognito_user_pool_id
+}
+```
+
+The user receives a temporary password and must set a permanent password at
+first login.
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_bucket_name"></a> [bucket\_name](#input\_bucket\_name) | n/a | `string` | n/a | yes |
-| <a name="input_dynamodb_table_name"></a> [dynamodb\_table\_name](#input\_dynamodb\_table\_name) | n/a | `string` | n/a | yes |
-| <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | n/a | `string` | n/a | yes |
-| <a name="input_lambda_role_name"></a> [lambda\_role\_name](#input\_lambda\_role\_name) | name for lambda role which will be created by this module | `string` | n/a | yes |
-| <a name="input_periods"></a> [periods](#input\_periods) | n/a | <pre>list(object({<br/>    name = string,<br/>    days = list(string),<br/>    begintime = string,<br/>    endtime = string,<br/>    timezone = string<br/>  }))</pre> | n/a | yes |
-| <a name="input_schedules"></a> [schedules](#input\_schedules) | n/a | <pre>list(object({<br/>    name = string,<br/>    period = list(string)<br/>}))</pre> | n/a | yes |
-| <a name="input_sqs_arn"></a> [sqs\_arn](#input\_sqs\_arn) | n/a | `string` | n/a | yes |
+| Name | Type | Default | Required | Description |
+| --- | --- | --- | :---: | --- |
+| `bucket_name` | `string` | — | yes | Globally unique private S3 bucket for frontend assets. |
+| `dynamodb_table_name` | `string` | — | yes | DynamoDB table name for schedules and periods. |
+| `frontend_fqdn` | `string` | — | yes | Frontend hostname without `https://`. |
+| `kms_key_arn` | `string` | — | yes | Existing KMS key used by the Lambda modules and DynamoDB module. |
+| `lambda_role_name` | `string` | — | yes | Name suffix used for the Lambda IAM roles. |
+| `sqs_arn` | `string` | — | yes | Existing SQS dead-letter queue ARN. |
+| `periods` | `list(object)` | `[]` | no | Periods created during deployment. |
+| `schedules` | `list(object)` | `[]` | no | Schedules created during deployment. |
+| `route53_zone_id` | `string` | `null` | conditional | Existing public hosted zone ID. |
+| `route53_zone_name` | `string` | `null` | conditional | Public hosted zone to create when no zone ID is supplied. |
+
+Set exactly one of `route53_zone_id` or `route53_zone_name`.
 
 ## Outputs
 
-No outputs.
-<!-- END_TF_DOCS -->
+| Name | Description |
+| --- | --- |
+| `bucket_url` | Authenticated custom frontend URL. |
+| `cloudfront_url` | Generated CloudFront distribution URL. |
+| `frontend_url` | Authenticated custom frontend URL. |
+| `frontend_fqdn` | Frontend hostname. |
+| `frontend_certificate_arn` | ACM certificate used by CloudFront. |
+| `cognito_user_pool_id` | Cognito user pool ID. |
+| `cognito_user_pool_client_id` | Cognito app client ID. |
+| `cognito_login_domain` | Cognito managed-login domain. |
+| `route53_zone_id` | Hosted zone used by the module. |
+| `route53_name_servers` | Name servers when the module creates the hosted zone; otherwise empty. |
+
+## Deployment notes
+
+- CloudFront deployment can take several minutes after `terraform apply`.
+- HTML and authentication assets use no-cache headers, but a hard refresh can
+  still be useful immediately after deployment.
+- When updating a remote module installation, run `terraform init -upgrade`
+  before `terraform apply`.
+- The ACM certificate is created in `us-east-1`, regardless of the application
+  deployment region.
+- The frontend and API are exposed through the same CloudFront hostname.
+
+## User documentation
+
+End-user instructions are maintained separately in the
+[Instance Scheduler User Manual](docs/user-manual.md).
+
+## Development
+
+Install the repository pre-commit hooks:
+
+```bash
+pre-commit install
+```
+
+See the [pre-commit documentation](https://pre-commit.com/#install) for setup
+instructions.
+
+## License
+
+See [LICENSE](LICENSE).

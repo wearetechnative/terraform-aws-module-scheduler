@@ -394,6 +394,83 @@ def handler(event, context):
             }
         )
 
+    elif path == '/db/delete_schedule':
+        request_body = event.get('body')
+        if request_body is None:
+            return json_response(400, {"message": "Schedule data is required"})
+
+        request_body = json.loads(request_body)
+        schedule_name = request_body.get("schedule_name", "").strip()
+        if not schedule_name:
+            return json_response(400, {"message": "A schedule name is required"})
+
+        ec2 = boto3.client('ec2')
+        paginator = ec2.get_paginator('describe_instances')
+        assigned_instances = []
+        for page in paginator.paginate(
+            Filters=[
+                {
+                    "Name": "tag:InstanceScheduler",
+                    "Values": [schedule_name]
+                },
+                {
+                    "Name": "instance-state-name",
+                    "Values": ["pending", "running", "stopping", "stopped"]
+                }
+            ]
+        ):
+            for reservation in page.get("Reservations", []):
+                for instance in reservation.get("Instances", []):
+                    tags = {
+                        tag["Key"]: tag.get("Value", "")
+                        for tag in instance.get("Tags", [])
+                    }
+                    if tags.get("InstanceScheduler") != schedule_name:
+                        continue
+                    assigned_instances.append({
+                        "instance_id": instance["InstanceId"],
+                        "name": tags.get("Name", "")
+                    })
+
+        if assigned_instances:
+            instance_names = [
+                instance["name"] or instance["instance_id"]
+                for instance in assigned_instances
+            ]
+            return json_response(
+                409,
+                {
+                    "message": (
+                        f'Schedule "{schedule_name}" is assigned to: '
+                        f'{", ".join(instance_names)}'
+                    ),
+                    "instances": assigned_instances
+                }
+            )
+
+        try:
+            dynamodb.delete_item(
+                TableName=table_name,
+                Key={
+                    "type": {"S": "schedule"},
+                    "name": {"S": schedule_name}
+                },
+                ConditionExpression="attribute_exists(#name)",
+                ExpressionAttributeNames={"#name": "name"}
+            )
+        except ClientError as error:
+            if error.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                return json_response(
+                    404,
+                    {"message": f'Schedule "{schedule_name}" was not found'}
+                )
+            raise
+
+        return json_response(
+            200,
+            {"message": "schedule deleted", "schedule_name": schedule_name}
+        )
+
     elif path == '/db/periods':
         response = dynamodb.query(
             TableName=table_name,
