@@ -1,4 +1,4 @@
-# Terraform AWS [Scheduler] ![](https://img.shields.io/github/workflow/status/TechNative-B-V/terraform-aws-module-name/tflint.yaml?style=plastic)
+# Terraform AWS [Scheduler] ![](https://img.shields.io/github/actions/workflow/status/wearetechnative/terraform-aws-module-scheduler/lint.yaml?branch=main&style=plastic&label=lint) ![](https://img.shields.io/github/actions/workflow/status/wearetechnative/terraform-aws-module-scheduler/security-scan.yaml?branch=main&style=plastic&label=security)
 
 <!-- SHIELDS -->
 
