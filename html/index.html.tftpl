@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#112f41">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <title>Instance Scheduler</title>
+  <script src="auth.js"></script>
   <style>
     :root {
       --ink: #112f41;
@@ -130,7 +132,7 @@
         <div class="hero-grid">
           <div>
             <h2>Run infrastructure only when it <em>needs to run.</em></h2>
-            <p>Build reusable operating windows, assign them to schedules, and keep your AWS instances aligned with working hours.</p>
+            <p>Build reusable operating windows, assign them to schedules, and run your AWS instances only when needed, reducing unnecessary cloud spend.</p>
           </div>
           <div class="hero-actions">
             <a class="btn btn-secondary" href="schedules.html">View schedules</a>
@@ -203,9 +205,10 @@
           list.appendChild(row);
         });
       })
-      .catch(function () {
+      .catch(function (error) {
+        console.error('Scheduler API request failed:', error);
         document.getElementById('scheduleCount').textContent = '—';
-        list.innerHTML = '<div class="empty">Could not reach the scheduler API.</div>';
+        list.innerHTML = '<div class="empty">Could not reach the scheduler API. Check the browser console for the HTTP or CORS error.</div>';
       });
   </script>
 </body>

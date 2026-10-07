@@ -1,5 +1,3 @@
-
-
 module "webpage_lambda" {
   source            = "github.com/wearetechnative/terraform-aws-lambda.git?ref=fe102f9e43209b47bf919be75066df102458d8d9"
   name              = "webpage_hosting_s3"

@@ -7,6 +7,19 @@ def handler(event, context):
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
     table_name=os.environ["TABLENAME"]
     path = event.get('rawPath')
+    method = event.get("requestContext", {}).get("http", {}).get("method")
+
+    if method == "OPTIONS":
+        return {
+            "statusCode": 204,
+            "headers": {
+                "access-control-allow-origin": "*",
+                "access-control-allow-methods": "GET,POST,OPTIONS",
+                "access-control-allow-headers": "authorization,content-type"
+            },
+            "body": ""
+        }
+
     db = boto3.resource('dynamodb')
     dynamodb = boto3.client('dynamodb')
     table = db.Table(table_name)
@@ -94,6 +107,23 @@ def handler(event, context):
                 }
             }
         )
+
+    def validate_period(period):
+        period_name = period.get("period_name", "").strip()
+        selected_days = period.get("selected_days", [])
+        begin_time = period.get("begin_time", "").strip()
+        end_time = period.get("end_time", "").strip()
+        timezone = period.get("timezone", "").strip()
+
+        if not all([period_name, selected_days, end_time, timezone]):
+            return None, "Name, days, stop time, and timezone are required"
+
+        period["period_name"] = period_name
+        period["selected_days"] = selected_days
+        period["begin_time"] = begin_time
+        period["end_time"] = end_time
+        period["timezone"] = timezone
+        return period, None
 
     def get_period_assignments():
         response = dynamodb.query(
@@ -364,6 +394,83 @@ def handler(event, context):
             }
         )
 
+    elif path == '/db/delete_schedule':
+        request_body = event.get('body')
+        if request_body is None:
+            return json_response(400, {"message": "Schedule data is required"})
+
+        request_body = json.loads(request_body)
+        schedule_name = request_body.get("schedule_name", "").strip()
+        if not schedule_name:
+            return json_response(400, {"message": "A schedule name is required"})
+
+        ec2 = boto3.client('ec2')
+        paginator = ec2.get_paginator('describe_instances')
+        assigned_instances = []
+        for page in paginator.paginate(
+            Filters=[
+                {
+                    "Name": "tag:InstanceScheduler",
+                    "Values": [schedule_name]
+                },
+                {
+                    "Name": "instance-state-name",
+                    "Values": ["pending", "running", "stopping", "stopped"]
+                }
+            ]
+        ):
+            for reservation in page.get("Reservations", []):
+                for instance in reservation.get("Instances", []):
+                    tags = {
+                        tag["Key"]: tag.get("Value", "")
+                        for tag in instance.get("Tags", [])
+                    }
+                    if tags.get("InstanceScheduler") != schedule_name:
+                        continue
+                    assigned_instances.append({
+                        "instance_id": instance["InstanceId"],
+                        "name": tags.get("Name", "")
+                    })
+
+        if assigned_instances:
+            instance_names = [
+                instance["name"] or instance["instance_id"]
+                for instance in assigned_instances
+            ]
+            return json_response(
+                409,
+                {
+                    "message": (
+                        f'Schedule "{schedule_name}" is assigned to: '
+                        f'{", ".join(instance_names)}'
+                    ),
+                    "instances": assigned_instances
+                }
+            )
+
+        try:
+            dynamodb.delete_item(
+                TableName=table_name,
+                Key={
+                    "type": {"S": "schedule"},
+                    "name": {"S": schedule_name}
+                },
+                ConditionExpression="attribute_exists(#name)",
+                ExpressionAttributeNames={"#name": "name"}
+            )
+        except ClientError as error:
+            if error.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                return json_response(
+                    404,
+                    {"message": f'Schedule "{schedule_name}" was not found'}
+                )
+            raise
+
+        return json_response(
+            200,
+            {"message": "schedule deleted", "schedule_name": schedule_name}
+        )
+
     elif path == '/db/periods':
         response = dynamodb.query(
             TableName=table_name,
@@ -440,6 +547,9 @@ def handler(event, context):
         period = event.get('body')
         if period is not None:
             period = json.loads(period)
+            period, validation_error = validate_period(period)
+            if validation_error:
+                return json_response(400, {"message": validation_error})
             save_period(period)
             return json_response(
                 200,
@@ -453,22 +563,10 @@ def handler(event, context):
             return json_response(400, {"message": "Period data is required"})
 
         period = json.loads(period)
-        period_name = period.get("period_name", "").strip()
-        selected_days = period.get("selected_days", [])
-        begin_time = period.get("begin_time", "").strip()
-        end_time = period.get("end_time", "").strip()
-        timezone = period.get("timezone", "").strip()
-        if not all([
-            period_name,
-            selected_days,
-            begin_time,
-            end_time,
-            timezone
-        ]):
-            return json_response(
-                400,
-                {"message": "Name, days, times, and timezone are required"}
-            )
+        period, validation_error = validate_period(period)
+        if validation_error:
+            return json_response(400, {"message": validation_error})
+        period_name = period["period_name"]
 
         existing_period = dynamodb.get_item(
             TableName=table_name,
@@ -572,6 +670,9 @@ def handler(event, context):
         print(period)
         if period != None:
             period = json.loads(period)
+            period, validation_error = validate_period(period)
+            if validation_error:
+                return json_response(400, {"message": validation_error})
             save_period(period)
             schedule = period["schedule_name"]
             p_of_schedule = period["period_name"]

@@ -4,7 +4,7 @@ resource "aws_apigatewayv2_api" "my_api" {
 
   cors_configuration {
     allow_credentials = false
-    allow_headers     = ["content-type"]
+    allow_headers     = ["authorization", "content-type"]
     allow_methods     = ["GET", "POST", "OPTIONS"]
     allow_origins     = ["*"]
     max_age           = 3600
@@ -21,9 +21,18 @@ resource "aws_apigatewayv2_integration" "int" {
 }
 
 resource "aws_apigatewayv2_route" "my_route" {
-  for_each  = toset(local.webpage_api_routes)
+  for_each           = toset(local.webpage_api_routes)
+  api_id             = aws_apigatewayv2_api.my_api.id
+  route_key          = each.value
+  target             = "integrations/${aws_apigatewayv2_integration.int.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
+resource "aws_apigatewayv2_route" "cors_preflight" {
+  for_each  = local.webpage_api_paths
   api_id    = aws_apigatewayv2_api.my_api.id
-  route_key = each.value
+  route_key = "OPTIONS ${each.value}"
   target    = "integrations/${aws_apigatewayv2_integration.int.id}"
 }
 
@@ -125,6 +134,14 @@ resource "aws_lambda_permission" "allow_API_create_schedule" {
   function_name = module.webpage_lambda.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/create_schedule"
+}
+
+resource "aws_lambda_permission" "allow_API_delete_schedule" {
+  statement_id  = "AllowExecutionFromApigatewayDeleteSchedule"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/db/delete_schedule"
 }
 
 resource "aws_lambda_permission" "allow_API_delete_period_definition" {

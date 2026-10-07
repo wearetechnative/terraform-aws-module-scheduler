@@ -2,6 +2,7 @@ locals {
   webpage_api_routes = [
     "ANY /db",
     "ANY /db/create_schedule",
+    "ANY /db/delete_schedule",
     "ANY /db/periods",
     "ANY /db/list_periods",
     "ANY /db/create_period",
@@ -14,4 +15,9 @@ locals {
     "ANY /instances/schedule",
     "ANY /instances/ignore"
   ]
+
+  webpage_api_paths = toset([
+    for route in local.webpage_api_routes :
+    trimprefix(route, "ANY ")
+  ])
 }

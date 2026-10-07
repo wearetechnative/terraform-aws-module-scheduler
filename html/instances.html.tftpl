@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#112f41">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <title>Instances · Instance Scheduler</title>
+  <script src="auth.js"></script>
   <style>
     :root { --ink:#112f41; --muted:#607582; --line:#dce7eb; --paper:#f3f7f8; --accent:#72c8d3; --dark:#112f41; --danger:#a93838; }
     * { box-sizing:border-box; }
@@ -54,13 +56,34 @@
     .state.running { color:#25704b; background:#eaf7ef; }
     .state.stopped { color:#7a5555; background:#f7eeee; }
     .state.pending,.state.stopping { color:#806a28; background:#f8f3dd; }
-    .assignment { display:flex; align-items:center; gap:8px; min-width:285px; }
-    .assignment select { width:190px; height:39px; padding:0 10px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); }
+    .assignment { display:flex; align-items:center; gap:8px; min-width:390px; }
+    .assignment select { width:175px; height:39px; padding:0 10px; border:1px solid #d6dbd7; border-radius:9px; background:#fff; color:var(--ink); }
     .unmanaged { color:#8a6c2f; font-size:11px; font-weight:700; }
     .override { display:flex; align-items:center; gap:8px; min-width:210px; }
     .override-value { color:#806a28; font-size:11px; font-weight:700; }
     .state-message { padding:65px 20px; text-align:center; color:var(--muted); }
     .state-message strong { display:block; color:var(--ink); margin-bottom:5px; }
+    .calendar-button { margin-left:auto; }
+    #instanceCalendarDialog { width:min(1180px,calc(100% - 32px)); }
+    .calendar-dialog-body { padding:0 24px 22px; overflow:auto; }
+    .calendar-summary { display:flex; flex-wrap:wrap; gap:8px 18px; padding:15px 0; color:var(--muted); font-size:12px; }
+    .calendar-summary strong { color:var(--ink); }
+    .calendar-detail { min-width:940px; display:grid; grid-template-columns:72px repeat(7,minmax(115px,1fr)); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+    .calendar-corner,.calendar-day-header { height:45px; display:grid; place-items:center; color:var(--muted); background:#fafbf9; border-bottom:1px solid var(--line); border-right:1px solid var(--line); font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.06em; }
+    .calendar-day-header:last-child { border-right:0; }
+    .time-axis { position:relative; height:960px; border-right:1px solid var(--line); background:#fafbf9; }
+    .time-label { position:absolute; right:9px; transform:translateY(-50%); color:#819099; font-size:10px; font-variant-numeric:tabular-nums; }
+    .day-track { position:relative; height:960px; border-right:1px solid var(--line); background-color:#fff; background-image:linear-gradient(to bottom,transparent 39px,#e5ecef 39px,#e5ecef 40px); background-size:100% 40px; }
+    .day-track:last-child { border-right:0; }
+    .run-block { position:absolute; left:7px; right:7px; min-height:4px; padding:5px 7px; overflow:hidden; border-radius:7px; color:#155d3d; background:#bce8ce; border:1px solid #72c497; font-size:10px; font-weight:750; line-height:1.3; box-shadow:0 2px 6px rgba(37,112,75,.12); }
+    .run-block strong { display:block; color:#174f38; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .stop-marker { position:absolute; left:5px; right:5px; height:2px; background:#c49427; }
+    .stop-marker::before { content:""; position:absolute; left:0; top:-4px; width:10px; height:10px; border-radius:50%; background:#c49427; }
+    .stop-marker span { position:absolute; left:14px; top:-9px; padding:2px 5px; border-radius:5px; color:#806a28; background:#fff4d7; font-size:9px; font-weight:750; white-space:nowrap; }
+    .calendar-legend { display:flex; gap:18px; padding-top:12px; color:var(--muted); font-size:11px; }
+    .calendar-legend span { display:inline-flex; align-items:center; gap:7px; }
+    .legend-run { width:23px; height:10px; border:1px solid #72c497; border-radius:4px; background:#bce8ce; }
+    .legend-stop { width:23px; height:2px; background:#c49427; }
     dialog { width:min(460px,calc(100% - 32px)); padding:0; border:0; border-radius:18px; color:var(--ink); box-shadow:0 24px 80px rgba(23,32,28,.25); }
     dialog::backdrop { background:rgba(16,24,20,.55); backdrop-filter:blur(3px); }
     .dialog-head { padding:22px 24px 17px; border-bottom:1px solid var(--line); }
@@ -130,12 +153,33 @@
       </div>
     </form>
   </dialog>
+  <dialog id="instanceCalendarDialog">
+    <div class="dialog-head"><h2 id="calendarTitle">Instance calendar</h2><p id="calendarSubtitle">Weekly scheduled operating windows.</p></div>
+    <div class="calendar-dialog-body">
+      <div class="calendar-summary" id="calendarSummary"></div>
+      <div class="calendar-detail" id="calendarDetail"></div>
+      <div class="calendar-legend"><span><i class="legend-run"></i>Scheduled running</span><span><i class="legend-stop"></i>Stop-only time</span></div>
+    </div>
+    <div class="dialog-actions"><div></div><button class="btn ghost" type="button" id="closeCalendar">Close</button></div>
+  </dialog>
   <div class="toast" id="toast" role="status"></div>
   <script>
     const apiUrl = '${api_url}';
     const rows = document.getElementById('instanceRows');
+    const calendarDialog = document.getElementById('instanceCalendarDialog');
+    const calendarDetail = document.getElementById('calendarDetail');
+    const weekdays = [
+      {key:'mon', label:'Monday'},
+      {key:'tue', label:'Tuesday'},
+      {key:'wed', label:'Wednesday'},
+      {key:'thu', label:'Thursday'},
+      {key:'fri', label:'Friday'},
+      {key:'sat', label:'Saturday'},
+      {key:'sun', label:'Sunday'}
+    ];
     let instances = [];
     let schedules = [];
+    let schedulePeriods = {};
     let selectedIgnoreInstance = null;
 
     function request(path, options) {
@@ -163,14 +207,30 @@
       document.getElementById('unmanagedCount').textContent = instances.length - managed;
     }
 
-    function render(filter) {
+    function attributeValue(attribute, fallback) {
+      if (attribute === undefined || attribute === null) return fallback;
+      if (typeof attribute !== 'object' || Array.isArray(attribute)) return attribute;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'S')) return attribute.S;
+      if (Object.prototype.hasOwnProperty.call(attribute, 'SS')) return attribute.SS;
+      return fallback;
+    }
+
+    function visibleInstances(filter) {
       const query = (filter || '').trim().toLowerCase();
-      const visible = instances.filter(function (instance) {
+      return instances.filter(function (instance) {
         return [instance.name, instance.instance_id, instance.schedule, instance.private_ip]
           .some(function (value) { return (value || '').toLowerCase().includes(query); });
       });
-      rows.innerHTML = '';
+    }
+
+    function render(filter) {
+      const visible = visibleInstances(filter);
       document.getElementById('resultCount').textContent = visible.length + (visible.length === 1 ? ' instance' : ' instances');
+      renderTable(visible);
+    }
+
+    function renderTable(visible) {
+      rows.innerHTML = '';
       if (!visible.length) {
         rows.innerHTML = '<tr><td colspan="6"><div class="state-message"><strong>No instances found</strong>Try another search or check this AWS region.</div></td></tr>';
         return;
@@ -223,9 +283,120 @@
         ignoreButton.addEventListener('click', function () { openIgnoreDialog(instance); });
         ignore.appendChild(ignoreValue); ignore.appendChild(ignoreButton); ignoreCell.appendChild(ignore);
 
+        const calendarButton = document.createElement('button');
+        calendarButton.className = 'btn ghost calendar-button';
+        calendarButton.textContent = 'Calendar';
+        calendarButton.disabled = !instance.schedule;
+        calendarButton.title = instance.schedule ? 'View weekly calendar' : 'Assign a schedule first';
+        calendarButton.addEventListener('click', function () { openCalendar(instance); });
+        assignment.appendChild(calendarButton);
+
         row.appendChild(identity); row.appendChild(stateCell); row.appendChild(type); row.appendChild(location); row.appendChild(assignmentCell); row.appendChild(ignoreCell);
         rows.appendChild(row);
       });
+    }
+
+    function openCalendar(instance) {
+      if (!instance.schedule) return;
+      document.getElementById('calendarTitle').textContent = instance.name || instance.instance_id;
+      document.getElementById('calendarSubtitle').textContent = 'Weekly calendar for ' + instance.schedule;
+      const summary = document.getElementById('calendarSummary');
+      summary.innerHTML = '<span><strong>Instance:</strong> ' + escapeHtml(instance.instance_id) + '</span>' +
+        '<span><strong>Schedule:</strong> ' + escapeHtml(instance.schedule) + '</span>' +
+        '<span><strong>State:</strong> ' + escapeHtml(instance.state) + '</span>' +
+        (instance.ignore_scheduler ? '<span><strong>Override:</strong> ' + escapeHtml(instance.ignore_scheduler) + '</span>' : '');
+      renderInstanceCalendar(schedulePeriods[instance.schedule] || []);
+      calendarDialog.showModal();
+    }
+
+    function renderInstanceCalendar(periods) {
+      calendarDetail.innerHTML = '';
+      const corner = document.createElement('div');
+      corner.className = 'calendar-corner';
+      corner.textContent = 'Time';
+      calendarDetail.appendChild(corner);
+      weekdays.forEach(function (day) {
+        const header = document.createElement('div');
+        header.className = 'calendar-day-header';
+        header.textContent = day.label;
+        calendarDetail.appendChild(header);
+      });
+      const timeAxis = document.createElement('div');
+      timeAxis.className = 'time-axis';
+      for (let hour = 0; hour < 24; hour += 1) {
+        const label = document.createElement('span');
+        label.className = 'time-label';
+        label.style.top = (hour * 40) + 'px';
+        label.textContent = String(hour).padStart(2, '0') + ':00';
+        timeAxis.appendChild(label);
+      }
+      calendarDetail.appendChild(timeAxis);
+
+      weekdays.forEach(function (day) {
+        const track = document.createElement('div');
+        track.className = 'day-track';
+        periods.filter(function (period) {
+          return period.days.includes(day.key);
+        }).forEach(function (period) {
+          const endMinutes = timeToMinutes(period.end);
+          if (period.begin) {
+            const beginMinutes = timeToMinutes(period.begin);
+            const duration = Math.max(1, endMinutes - beginMinutes);
+            const block = document.createElement('div');
+            block.className = 'run-block';
+            block.style.top = (beginMinutes / 1440 * 960) + 'px';
+            block.style.height = Math.max(4, duration / 1440 * 960) + 'px';
+            block.title = period.name + ': ' + period.begin + '–' + period.end + ' (' + period.timezone + ')';
+            block.innerHTML = '<strong>' + escapeHtml(period.name) + '</strong>' +
+              escapeHtml(period.begin + '–' + period.end);
+            track.appendChild(block);
+          } else {
+            const marker = document.createElement('div');
+            marker.className = 'stop-marker';
+            marker.style.top = (endMinutes / 1440 * 960) + 'px';
+            marker.title = period.name + ': stop at ' + period.end + ' (' + period.timezone + ')';
+            const label = document.createElement('span');
+            label.textContent = period.name + ' · ' + period.end;
+            marker.appendChild(label);
+            track.appendChild(marker);
+          }
+        });
+        calendarDetail.appendChild(track);
+      });
+    }
+
+    function timeToMinutes(value) {
+      const parts = (value || '00:00').split(':');
+      return (Number(parts[0]) * 60) + Number(parts[1]);
+    }
+
+    function escapeHtml(value) {
+      const element = document.createElement('div');
+      element.textContent = value;
+      return element.innerHTML;
+    }
+
+    function loadSchedulePeriods(scheduleNames) {
+      return Promise.all(scheduleNames.map(function (scheduleName) {
+        return request('/db/list_periods', {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=UTF-8'},
+          body:JSON.stringify({schedule_name:scheduleName})
+        }).then(function (data) {
+          schedulePeriods[scheduleName] = (data.period_list || []).map(function (period) {
+            return {
+              name:attributeValue(period.name, ''),
+              days:attributeValue(period.days, []),
+              begin:attributeValue(period.begintime, ''),
+              end:attributeValue(period.endtime, ''),
+              timezone:attributeValue(period.timezone, 'UTC')
+            };
+          });
+        }).catch(function (error) {
+          console.error('Calendar period loading failed for ' + scheduleName + ':', error);
+          schedulePeriods[scheduleName] = [];
+        });
+      }));
     }
 
     function updateAssignment(instance, select, button) {
@@ -265,6 +436,10 @@
         .then(function (results) {
           instances = results[0].instances || [];
           schedules = results[1].schedules_list || [];
+          schedulePeriods = {};
+          return loadSchedulePeriods(schedules);
+        })
+        .then(function () {
           updateSummary();
           render(document.getElementById('search').value);
         })
@@ -309,6 +484,7 @@
     }
 
     document.getElementById('search').addEventListener('input', function (event) { render(event.target.value); });
+    document.getElementById('closeCalendar').addEventListener('click', function () { calendarDialog.close(); });
     document.getElementById('refreshButton').addEventListener('click', load);
     document.getElementById('cancelIgnore').addEventListener('click', function () { document.getElementById('ignoreDialog').close(); });
     document.getElementById('removeIgnore').addEventListener('click', function () {
