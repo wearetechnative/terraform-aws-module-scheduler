@@ -6,6 +6,7 @@ terraform {
       configuration_aliases = [
         aws.us_east_1
       ]
+      version = ">= 5.0"
     }
   }
 }
