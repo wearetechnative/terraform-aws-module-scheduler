@@ -1,4 +1,4 @@
-# Terraform AWS Instance Scheduler
+# Terraform AWS [Scheduler] ![](https://img.shields.io/github/actions/workflow/status/wearetechnative/terraform-aws-module-scheduler/lint.yaml?branch=main&style=plastic&label=lint) ![](https://img.shields.io/github/actions/workflow/status/wearetechnative/terraform-aws-module-scheduler/security-scan.yaml?branch=main&style=plastic&label=security)
 
 [![TechNative](we-are-technative.png)](https://www.technative.nl)
 
