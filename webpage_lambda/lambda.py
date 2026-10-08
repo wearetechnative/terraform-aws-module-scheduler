@@ -302,6 +302,148 @@ def handler(event, context):
             {"message": "scheduler override removed", "instance_id": instance_id}
         )
 
+    if path == '/ecs-services':
+        ecs = boto3.client('ecs')
+        services = []
+        for cluster_page in ecs.get_paginator('list_clusters').paginate():
+            for cluster_arn in cluster_page.get('clusterArns', []):
+                service_arns = []
+                for service_page in ecs.get_paginator('list_services').paginate(
+                    cluster=cluster_arn
+                ):
+                    service_arns.extend(service_page.get('serviceArns', []))
+
+                for offset in range(0, len(service_arns), 10):
+                    response = ecs.describe_services(
+                        cluster=cluster_arn,
+                        services=service_arns[offset:offset + 10],
+                        include=['TAGS']
+                    )
+                    for service in response.get('services', []):
+                        tags = {
+                            tag['key']: tag.get('value', '')
+                            for tag in service.get('tags', [])
+                        }
+                        services.append({
+                            'service_arn': service['serviceArn'],
+                            'service_name': service.get('serviceName', ''),
+                            'cluster_arn': service.get('clusterArn', cluster_arn),
+                            'cluster_name': cluster_arn.rsplit('/', 1)[-1],
+                            'status': service.get('status', 'UNKNOWN'),
+                            'desired_count': service.get('desiredCount', 0),
+                            'running_count': service.get('runningCount', 0),
+                            'pending_count': service.get('pendingCount', 0),
+                            'launch_type': service.get('launchType', ''),
+                            'scheduling_strategy': service.get(
+                                'schedulingStrategy', ''
+                            ),
+                            'schedule': tags.get('ServiceScheduler', ''),
+                            'ignore_scheduler': tags.get('Ignore_scheduler', '')
+                        })
+        services.sort(key=lambda item: (
+            item['cluster_name'].lower(),
+            item['service_name'].lower()
+        ))
+        return json_response(200, {'services': services})
+
+    if path in {'/ecs-services/schedule', '/ecs-services/ignore'}:
+        request_body = event.get('body')
+        if request_body is None:
+            return json_response(400, {'message': 'ECS service data is required'})
+
+        request_body = json.loads(request_body)
+        cluster_arn = request_body.get('cluster_arn', '').strip()
+        service_arn = request_body.get('service_arn', '').strip()
+        if not cluster_arn or not service_arn:
+            return json_response(
+                400,
+                {'message': 'A cluster ARN and service ARN are required'}
+            )
+
+        ecs = boto3.client('ecs')
+        response = ecs.describe_services(
+            cluster=cluster_arn,
+            services=[service_arn]
+        )
+        if not response.get('services') or response.get('failures'):
+            return json_response(404, {'message': 'ECS service was not found'})
+
+        if path == '/ecs-services/schedule':
+            schedule_name = request_body.get('schedule_name', '').strip()
+            if schedule_name:
+                schedule_response = dynamodb.get_item(
+                    TableName=table_name,
+                    Key={
+                        'type': {'S': 'schedule'},
+                        'name': {'S': schedule_name}
+                    }
+                )
+                if not schedule_response.get('Item'):
+                    return json_response(
+                        404,
+                        {'message': f'Schedule "{schedule_name}" was not found'}
+                    )
+                ecs.tag_resource(
+                    resourceArn=service_arn,
+                    tags=[{'key': 'ServiceScheduler', 'value': schedule_name}]
+                )
+                return json_response(200, {
+                    'message': 'schedule assigned',
+                    'service_arn': service_arn,
+                    'schedule_name': schedule_name
+                })
+
+            ecs.untag_resource(
+                resourceArn=service_arn,
+                tagKeys=['ServiceScheduler']
+            )
+            return json_response(200, {
+                'message': 'schedule removed',
+                'service_arn': service_arn
+            })
+
+        ignore_until = request_body.get('ignore_until', '').strip()
+        timezone = request_body.get('timezone', '').strip()
+        if ignore_until or timezone:
+            if not ignore_until or not timezone:
+                return json_response(
+                    400,
+                    {'message': 'Both an ignore time and timezone are required'}
+                )
+            try:
+                datetime.strptime(ignore_until, '%H:%M')
+                ZoneInfo(timezone)
+            except ValueError:
+                return json_response(
+                    400,
+                    {'message': 'Ignore time must use 24-hour HH:MM format'}
+                )
+            except ZoneInfoNotFoundError:
+                return json_response(
+                    400,
+                    {'message': f'Unknown timezone "{timezone}"'}
+                )
+
+            tag_value = f'{ignore_until} {timezone}'
+            ecs.tag_resource(
+                resourceArn=service_arn,
+                tags=[{'key': 'Ignore_scheduler', 'value': tag_value}]
+            )
+            return json_response(200, {
+                'message': 'scheduler override assigned',
+                'service_arn': service_arn,
+                'ignore_scheduler': tag_value
+            })
+
+        ecs.untag_resource(
+            resourceArn=service_arn,
+            tagKeys=['Ignore_scheduler']
+        )
+        return json_response(200, {
+            'message': 'scheduler override removed',
+            'service_arn': service_arn
+        })
+
     
     if path == '/db':
         response = table.query(
@@ -445,6 +587,50 @@ def handler(event, context):
                         f'{", ".join(instance_names)}'
                     ),
                     "instances": assigned_instances
+                }
+            )
+
+        ecs = boto3.client('ecs')
+        assigned_services = []
+        for cluster_page in ecs.get_paginator('list_clusters').paginate():
+            for cluster_arn in cluster_page.get('clusterArns', []):
+                service_arns = []
+                for service_page in ecs.get_paginator('list_services').paginate(
+                    cluster=cluster_arn
+                ):
+                    service_arns.extend(service_page.get('serviceArns', []))
+                for offset in range(0, len(service_arns), 10):
+                    service_response = ecs.describe_services(
+                        cluster=cluster_arn,
+                        services=service_arns[offset:offset + 10],
+                        include=['TAGS']
+                    )
+                    for service in service_response.get('services', []):
+                        tags = {
+                            tag['key']: tag.get('value', '')
+                            for tag in service.get('tags', [])
+                        }
+                        if tags.get('ServiceScheduler') == schedule_name:
+                            assigned_services.append({
+                                'service_arn': service['serviceArn'],
+                                'service_name': service.get('serviceName', ''),
+                                'cluster_arn': cluster_arn,
+                                'cluster_name': cluster_arn.rsplit('/', 1)[-1]
+                            })
+
+        if assigned_services:
+            service_names = [
+                f"{service['cluster_name']}/{service['service_name']}"
+                for service in assigned_services
+            ]
+            return json_response(
+                409,
+                {
+                    'message': (
+                        f'Schedule "{schedule_name}" is assigned to ECS services: '
+                        f'{", ".join(service_names)}'
+                    ),
+                    'services': assigned_services
                 }
             )
 

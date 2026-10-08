@@ -62,6 +62,12 @@ data "aws_iam_policy_document" "instance_scheduler" {
       "ec2:DeleteTags",
       "ec2:DescribeTags",
       "ec2:DescribeInstanceStatus",
+      "ecs:ListClusters",
+      "ecs:ListServices",
+      "ecs:DescribeServices",
+      "ecs:ListTagsForResource",
+      "ecs:UpdateService",
+      "ecs:UntagResource",
       "dynamodb:*",
       "kms:*",
       "sqs:SendMessage"

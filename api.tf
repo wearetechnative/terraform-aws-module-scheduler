@@ -175,3 +175,27 @@ resource "aws_lambda_permission" "allow_API_instance_ignore" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/instances/ignore"
 }
+
+resource "aws_lambda_permission" "allow_API_ecs_services" {
+  statement_id  = "AllowExecutionFromApigatewayEcsServices"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/ecs-services"
+}
+
+resource "aws_lambda_permission" "allow_API_ecs_service_schedule" {
+  statement_id  = "AllowExecutionFromApigatewayEcsServiceSchedule"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/ecs-services/schedule"
+}
+
+resource "aws_lambda_permission" "allow_API_ecs_service_ignore" {
+  statement_id  = "AllowExecutionFromApigatewayEcsServiceIgnore"
+  action        = "lambda:InvokeFunction"
+  function_name = module.webpage_lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.my_api.execution_arn}/*/*/ecs-services/ignore"
+}

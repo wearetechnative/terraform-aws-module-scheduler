@@ -92,6 +92,15 @@ resource "aws_s3_bucket_object" "instances" {
   etag          = filemd5("${path.module}/html/instances.html.tftpl")
 }
 
+resource "aws_s3_bucket_object" "ecs_services" {
+  bucket        = aws_s3_bucket.webpage_bucket.id
+  key           = "ecs-services.html"
+  content       = templatefile("${path.module}/html/ecs-services.html.tftpl", { api_url = local.application_url })
+  content_type  = "text/html"
+  cache_control = "no-store, max-age=0"
+  etag          = filemd5("${path.module}/html/ecs-services.html.tftpl")
+}
+
 resource "aws_s3_bucket_object" "technative_logo" {
   bucket       = aws_s3_bucket.webpage_bucket.id
   key          = "technativelogo.svg"

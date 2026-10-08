@@ -40,6 +40,12 @@ data "aws_iam_policy_document" "launch_ec2" {
     sid = "EC2Access"
     actions = [
       "ec2:*",
+      "ecs:ListClusters",
+      "ecs:ListServices",
+      "ecs:DescribeServices",
+      "ecs:ListTagsForResource",
+      "ecs:TagResource",
+      "ecs:UntagResource",
       "kms:*",
       "dynamodb:*"
     ]
@@ -53,4 +59,3 @@ resource "aws_kms_grant" "webpage_scheduler_role" {
   grantee_principal = module.iam_role_webpage_scheduler.role_arn
   operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
 }
-

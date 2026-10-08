@@ -13,7 +13,10 @@ locals {
     "ANY /db/delete_period",
     "ANY /instances",
     "ANY /instances/schedule",
-    "ANY /instances/ignore"
+    "ANY /instances/ignore",
+    "ANY /ecs-services",
+    "ANY /ecs-services/schedule",
+    "ANY /ecs-services/ignore"
   ]
 
   webpage_api_paths = toset([

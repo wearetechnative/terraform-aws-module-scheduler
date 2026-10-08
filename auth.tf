@@ -211,6 +211,30 @@ resource "aws_cloudfront_distribution" "webpage" {
     origin_request_policy_id = aws_cloudfront_origin_request_policy.api.id
   }
 
+  ordered_cache_behavior {
+    path_pattern           = "/ecs-services"
+    target_origin_id       = "scheduler-api-origin"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
+    viewer_protocol_policy = "https-only"
+    compress               = true
+
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.api.id
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/ecs-services/*"
+    target_origin_id       = "scheduler-api-origin"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
+    viewer_protocol_policy = "https-only"
+    compress               = true
+
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.api.id
+  }
+
   custom_error_response {
     error_code         = 403
     response_code      = 200
