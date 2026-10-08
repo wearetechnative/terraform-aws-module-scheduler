@@ -160,6 +160,26 @@ def handler(event, context):
                                 for period_p in periods_in_schedule:
                                     state = dynamo_db('period', period_p)
                                     state_list.append(state)
+                                ignore_tag_present = False
+                                if any(tag["key"] == "Ignore_scheduler" for tag in tags):
+                                            print("Ignore tag Found for service")
+                                            ignore_tag_present = True
+                                            for tag_key in tags:
+                                                if tag_key.get("key") == "Ignore_scheduler":
+                                                    ignore_until = tag_key.get("value")
+                                                    ignore_until_list = ignore_until.split()
+                                                    timezone = ignore_until_list[1]
+                                                    ignore_until = ignore_until_list[0]
+                                                    print(f'ignore_until: {ignore_until}')
+                                                    print(f'timezone: {timezone}')
+                                                    ignore_until = datetime.strptime(ignore_until, "%H:%M").time()
+                                                    ignore_until = ignore_until.hour * 3600 + ignore_until.minute * 60 + ignore_until.second
+                                                    currenttime = datetime.now(ZoneInfo(timezone)).time()
+                                                    currenttime = currenttime.hour * 3600 +currenttime.minute * 60 + currenttime.second
+                                                    if currenttime >= ignore_until:
+                                                        ecs_delete_tag(service)
+                                                        ignore_tag_present = False
+
                                 
                                 if desired_count == 0 and 'start' in state_list:
                                     ecs.update_service(
@@ -174,25 +194,7 @@ def handler(event, context):
                                     print(f'Not Starting the ecs_service {service_name} because it is already started')
 
                                 elif desired_count > 0 and 'stop' in state_list:
-                                    if any(tag["key"] == "Ignore_scheduler" for tag in tags):
-                                        print("Ignore tag Found for service")
-                                        for tag_key in tags:
-                                            if tag_key.get("key") == "Ignore_scheduler":
-                                                ignore_until = tag_key.get("value")
-                                                ignore_until_list = ignore_until.split()
-                                                timezone = ignore_until_list[1]
-                                                ignore_until = ignore_until_list[0]
-                                                print(f'ignore_until: {ignore_until}')
-                                                print(f'timezone: {timezone}')
-                                                ignore_until = datetime.strptime(ignore_until, "%H:%M").time()
-                                                ignore_until = ignore_until.hour * 3600 + ignore_until.minute * 60 + ignore_until.second
-                                                currenttime = datetime.now(ZoneInfo(timezone)).time()
-                                                currenttime = currenttime.hour * 3600 +currenttime.minute * 60 + currenttime.second
-                                                if currenttime >= ignore_until:
-                                                    ecs_delete_tag(service)
-                                    
-                                        
-                                    else:
+                                    if ignore_tag_present != True:
                                         ecs.update_service(
                                                             cluster=cluster,
                                                             service=service,
@@ -232,19 +234,13 @@ def handler(event, context):
                         state = dynamo_db('period', period_p)
                         state_list.append(state)
                         print(state_list)
-                
-                    if 'start' in state_list:
-                        instance.start()
-                        instance_started_by_period = True
-                        print(f'Starting the Instance {instance.id}')
-
-                    elif instance_started_by_period != True and 'stop' in state_list:
-                        print(f'tag list: {tag_list}')
-                        if any(tag["Key"] == "Ignore_scheduler" for tag in tag_list):
+                    
+                    if any(tag["Key"] == "Ignore_scheduler" for tag in tag_list):
                             print("Ignore tag Found")
                             # ignore_until = tag_key.get("Ignore_scheduler") for tag_key in tag_list if "Ignore_scheduler" in tag_key
                             for tag_key in tag_list:
                                 if tag_key.get("Key") == "Ignore_scheduler":
+                                    ignore_tag_present = True
                                     ignore_until = tag_key.get("Value")
                             print(f'ignore_until: {ignore_until}')
                             print(type(ignore_until))
@@ -260,9 +256,15 @@ def handler(event, context):
                             currenttime = currenttime.hour * 3600 +currenttime.minute * 60 + currenttime.second
                             if currenttime >= ignore_until:
                                 delete_tag(instance.id)
+                                ignore_tag_present = False
+                
+                    if 'start' in state_list:
+                        instance.start()
+                        instance_started_by_period = True
+                        print(f'Starting the Instance {instance.id}')
 
-                        else:   
-                            print("No Ignore tag Found")         
+                    elif instance_started_by_period != True and 'stop' in state_list:
+                        if ignore_tag_present == False:     
                             if instance.hibernation_options=={'Configured': True}:
                                 instance.stop(Hibernate=True)
                                 print(f'Stopping the Instance {instance.id} with Hibernate')
