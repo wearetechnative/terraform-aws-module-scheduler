@@ -6,6 +6,7 @@ def handler(event, context):
     from dateutil import tz        
     ec2 = boto3.resource('ec2')
     table_name = os.environ["TABLE_NAME"]
+    ecs = boto3.client('ecs')
     
 
     def fetch_item(f, item):
@@ -34,7 +35,7 @@ def handler(event, context):
             item = response.get('Item')
             if item:
                 periods = item.get('periods')
-                print(periods)
+                print(f'periods in the schedule: {periods}')
                 results = []
                 if periods == None:
                     return('item_not_found')
@@ -102,9 +103,111 @@ def handler(event, context):
                 },
             ]
         )
-        print(response)                    
-           
+        print(response)  
+
+    def ecs_delete_tag(service):
+        client = boto3.client('ecs')
+        response = client.untag_resource(
+            resourceArn=service,
+            tagKeys=[
+                'Ignore_scheduler',
+            ]
+        )
+        print(response)
+    
+
         
+    response = ecs.list_clusters()
+    cluster_names = []      
+    for cluster in response['clusterArns']:
+        cluster_name = cluster.rsplit("/", 1)[-1]
+        cluster_names.append(cluster_name)
+    print(cluster_names)
+    for cluster_name in cluster_names:
+        service_response = ecs.list_services(
+            cluster = cluster_name
+        )
+        for service in service_response['serviceArns']:
+            
+            service_name = service.rsplit("/", 1)[-1]
+            print(service_name)
+            cluster_service = ecs.describe_services(
+                cluster=cluster_name,
+                services=[
+                    service
+                ],
+                include=[
+                    'TAGS',
+                ]
+            )
+            services = cluster_service['services']
+            for s in services:
+                tags = s.get('tags', [])
+                desired_count = s.get('desiredCount')
+                running_count = s.get('runningCount')
+            
+            
+           
+                if any(tag["key"] == "ServiceScheduler" for tag in tags):
+                    print("Found ServiceScheduler Tag")
+                    for tag_key in tags:
+                        if tag_key.get("key") == "ServiceScheduler":
+                            ecs_schedule = tag_key.get("value")
+                    
+                            periods_in_schedule = dynamo_db('schedule', ecs_schedule)
+                            state_list = []
+                            if periods_in_schedule != "item_not_found":
+                                for period_p in periods_in_schedule:
+                                    state = dynamo_db('period', period_p)
+                                    state_list.append(state)
+                                
+                                if desired_count == 0 and 'start' in state_list:
+                                    ecs.update_service(
+                                                    cluster=cluster,
+                                                    service=service,
+                                                    desiredCount=1
+                                                )
+                                    started_by_service = True            
+                                    print(f'Starting the ecs_service {service}')
+                                
+                                elif desired_count > 0 and 'start' in state_list:
+                                    print(f'Not Starting the ecs_service {service_name} because it is already started')
+
+                                elif desired_count > 0 and 'stop' in state_list:
+                                    if any(tag["key"] == "Ignore_scheduler" for tag in tags):
+                                        print("Ignore tag Found for service")
+                                        for tag_key in tags:
+                                            if tag_key.get("key") == "Ignore_scheduler":
+                                                ignore_until = tag_key.get("value")
+                                                ignore_until_list = ignore_until.split()
+                                                timezone = ignore_until_list[1]
+                                                ignore_until = ignore_until_list[0]
+                                                print(f'ignore_until: {ignore_until}')
+                                                print(f'timezone: {timezone}')
+                                                ignore_until = datetime.strptime(ignore_until, "%H:%M").time()
+                                                ignore_until = ignore_until.hour * 3600 + ignore_until.minute * 60 + ignore_until.second
+                                                currenttime = datetime.now(ZoneInfo(timezone)).time()
+                                                currenttime = currenttime.hour * 3600 +currenttime.minute * 60 + currenttime.second
+                                                if currenttime >= ignore_until:
+                                                    ecs_delete_tag(service)
+                                    
+                                        
+                                    else:
+                                        ecs.update_service(
+                                                            cluster=cluster,
+                                                            service=service,
+                                                            desiredCount=0
+                                                        )
+                                        print(f'Stopping the ecs_service {service}')
+
+                            else:
+                                print("exiting because no periods found in ecs_schedule")
+    
+
+
+                            
+                
+                
     for instance in ec2.instances.all():
         tags = instance.tags
         tag_list = []
