@@ -117,7 +117,7 @@
         <a class="active" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg> Overview</a>
         <a href="schedules.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> Schedules</a>
         <a href="periods.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Periods</a>
-        <a href="instances.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg> Instances</a>
+        <a href="instances.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg> EC2 instances</a>
         <a href="ecs-services.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="12" r="1"/><circle cx="7" cy="17" r="1"/></svg> ECS services</a>
       </nav>
       <div class="sidebar-foot"><strong>AWS connected</strong>Schedules are evaluated automatically by EventBridge.</div>
@@ -137,7 +137,7 @@
           </div>
           <div class="hero-actions">
             <a class="btn btn-secondary" href="schedules.html">View schedules</a>
-            <a class="btn btn-primary" href="instances.html">Manage instances <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+            <a class="btn btn-primary" href="instances.html">Manage EC2 instances <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
           </div>
         </div>
       </section>
@@ -167,7 +167,7 @@
           <div class="steps">
             <div class="step"><span class="step-num">1</span><div><strong>Create reusable periods</strong><p>Define the weekdays, start and stop times, and timezone for each operating window.</p></div></div>
             <div class="step"><span class="step-num">2</span><div><strong>Build a schedule</strong><p>Combine one or more periods into a named schedule, such as office hours or weekend coverage.</p></div></div>
-            <div class="step"><span class="step-num">3</span><div><strong>Assign it to EC2</strong><p>Choose a schedule on the Instances page. The app manages the InstanceScheduler tag for you.</p></div></div>
+            <div class="step"><span class="step-num">3</span><div><strong>Assign it to EC2</strong><p>Choose a schedule on the EC2 instances page. The app manages the InstanceScheduler tag for you.</p></div></div>
             <div class="step"><span class="step-num">4</span><div><strong>Temporarily ignore stopping</strong><p>Set Ignore_scheduler with an end time and timezone to keep an instance running. Its regular schedule remains assigned and resumes after the override expires.</p></div></div>
           </div>
         </article>
